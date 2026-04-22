@@ -14,7 +14,7 @@ OUTPUT_FILE      = "index.html"
 NOME_CLIENTE     = "Dra Mônica"
 LOGO_LETRA       = "DM"
 COR_ACENTO       = "#0ea5e9"
-LANCAMENTO_COD   = "LCT01"        # filtra campanhas pelo código; "" = ver tudo
+LANCAMENTO_COD   = "RDC02"        # filtra campanhas pelo código; "" = ver tudo
 USAR_PESQUISA    = False            # False = oculta aba Pesquisa
 
 # Metas de CPL — define cores (verde/amarelo/vermelho)
