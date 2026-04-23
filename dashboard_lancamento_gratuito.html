@@ -1007,7 +1007,7 @@ function renderDiarioCharts(){
 
   const METAS={
     ctr:   {bom:CTR_BOM,    medio:CTR_MEDIO,    inv:false, avgVal:avgCTR},
-    cpm:   {bom:CPM_BOM,    medio:CPM_MEDIO,    inv:true,  avgVal:avgCPM},
+    cpm:   {bom:null, medio:null, inv:true, avgVal:avgCPM},
     cpl:   {bom:CPL_BOM,    medio:CPL_MEDIO,    inv:true,  avgVal:avgCPL},
     cr:    {bom:CR_BOM,     medio:CR_MEDIO,     inv:false, avgVal:avgCR},
     tx_cv: {bom:TX_CONV_BOM,medio:TX_CONV_MEDIO,inv:false, avgVal:avgTxCV},
@@ -1015,6 +1015,7 @@ function renderDiarioCharts(){
 
   function getMetricColor(id, val){
     const m=METAS[id]; if(!m||val==null) return '#3b82f6';
+    if(m.bom==null) return '#3b82f6'; // neutro — sem threshold definido
     return m.inv
       ? (val<=m.bom?'#059669':val<=m.medio?'#d97706':'#dc2626')
       : (val>=m.bom?'#059669':val>=m.medio?'#d97706':'#dc2626');
