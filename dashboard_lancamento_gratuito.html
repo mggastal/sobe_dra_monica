@@ -168,6 +168,8 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 
 /* MOB */
 .mob-menu{display:none;width:34px;height:34px;border-radius:7px;background:var(--surface2);border:1px solid var(--border);cursor:pointer;font-size:17px;align-items:center;justify-content:center;}
+.desk-only{display:block!important;}
+@media(max-width:768px){.desk-only{display:none!important;}}
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:250;}
 .overlay.open{display:block;}
 @media(max-width:768px){.topbar{left:0;right:0;z-index:299!important;}
@@ -246,6 +248,14 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 
     <!-- META ADS (aba principal) -->
     <div class="page-section active" id="page-meta">
+      <!-- Filtro de campanha — só desktop -->
+      <details style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:0;margin-bottom:14px;box-shadow:var(--sh);display:none;" id="metaCampFilterDetails" class="desk-only">
+        <summary style="padding:10px 14px;cursor:pointer;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;list-style:none;display:flex;align-items:center;justify-content:space-between;user-select:none;">
+          Filtrar por campanha <span id="metaCampFilterCount" style="font-weight:400;font-size:10px"></span>
+          <span style="font-size:13px;color:var(--muted2)">▾</span>
+        </summary>
+        <div style="padding:0 14px 12px;" id="metaCampFilter"></div>
+      </details>
       <div class="krow k3 mb14" id="metaKpis"></div>
       <!-- Funil -->
       <div class="funnel-card mb14"><div class="funnel-title">Funil de Captação</div><div class="funnel-steps" id="funnelSteps"></div></div>
@@ -503,10 +513,12 @@ function buildFunnel(mk){
 
 // ═══ META ADS (aba principal) ═══
 function renderMeta(){
-  const mk=getMK(); const md=getMD(); const mt=getMT();
+  const mk=getMK(); const mt=getMT();
+  buildMetaCampFilter();
+  const md=getMDforMeta(); // usa filtro de campanha se selecionado
   if(!mk||!md) return;
 
-  // KPIs filtrados pelo período
+  // KPIs filtrados pelo período + campanha
   const spMK=md?.spend?.reduce((a,b)=>a+(b||0),0)||0;
   const ldMK=md?.leads?.reduce((a,b)=>a+(b||0),0)||0;
   const cplMK=spMK>0&&ldMK>0?r2(spMK/ldMK):null;
@@ -516,7 +528,7 @@ function renderMeta(){
     <div class="kpi" style="--kc:#3b82f6"><div class="kpi-lbl">Leads</div><div class="kpi-val" style="color:var(--text)">${fN(ldMK)}</div><div class="kpi-sub">captados no período</div></div>
     <div class="kpi" style="--kc:${cplCor}"><div class="kpi-lbl">CPL</div><div class="kpi-val" style="color:${cplCor}">${fR(cplMK)}</div><div class="kpi-sub">Custo por Lead</div></div>`;
 
-  // Funil recalculado do período
+  // Funil recalculado do período + campanha
   const funnelKpis={
     impressions: md.impressions?.reduce((a,b)=>a+(b||0),0)||0,
     link_clicks: md.link_clicks?.reduce((a,b)=>a+(b||0),0)||0,
@@ -920,6 +932,68 @@ function renderSeg(){
 
 // ═══ MÉTRICAS DIÁRIAS ═══
 let campFilterSel=new Set(); // Set vazio = todas as campanhas
+
+// ═══ FILTRO CAMPANHA — ABA META ═══
+let metaCampSel=new Set(); // Set vazio = todas
+
+function buildMetaCampFilter(){
+  const el=document.getElementById('metaCampFilter');
+  if(!el) return;
+  const dcBase=filtroLct?META_DAILY_CAMPS?.lct:META_DAILY_CAMPS?.all;
+  let camps=[];
+  if(dcBase){
+    camps=Object.keys(dcBase).filter(camp=>{
+      const cd=applyPeriod(dcBase[camp]);
+      return cd?.spend?.some(v=>v>0);
+    });
+  } else {
+    const mt=getMT(); camps=mt?.camps?.map(c=>c.n)||[];
+  }
+  if(!camps.length) return;
+  el.innerHTML='<div style="display:flex;flex-direction:column;gap:3px;">'
+    +'<label style="display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;background:var(--surface2);border:1px solid var(--border)">'
+    +'<input type="checkbox" id="meta_cb_todas" onchange="toggleMetaTodas(this)" checked style="accent-color:var(--accent)"> Todas</label>'
+    +camps.map(c=>`<label style="display:flex;align-items:center;gap:7px;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:10px;background:var(--surface);border:1px solid var(--border)" title="${c}">
+      <input type="checkbox" class="meta-camp-cb" value="${c.replace(/"/g,'&quot;')}" onchange="onMetaCampCheck()" checked style="accent-color:var(--accent);flex-shrink:0"> <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c}</span>
+    </label>`).join('')+'</div>';
+  metaCampSel=new Set();
+  const cnt=document.getElementById('metaCampFilterCount');
+  if(cnt) cnt.textContent=camps.length?`(${camps.length} campanhas)`:'';
+}
+function toggleMetaTodas(cb){
+  document.querySelectorAll('.meta-camp-cb').forEach(c=>{c.checked=cb.checked;});
+  metaCampSel=new Set();
+  renderMeta();
+}
+function onMetaCampCheck(){
+  const checked=[...document.querySelectorAll('.meta-camp-cb:checked')].map(c=>c.value);
+  const all=[...document.querySelectorAll('.meta-camp-cb')].map(c=>c.value);
+  const todasCb=document.getElementById('meta_cb_todas');
+  if(todasCb) todasCb.checked=(checked.length===all.length);
+  metaCampSel=checked.length===all.length?new Set():new Set(checked);
+  renderMeta();
+}
+function getMDforMeta(){
+  // Retorna daily filtrado pelas campanhas selecionadas no filtro da aba Meta
+  const md=getMD(); if(!md) return md;
+  if(!META_DAILY_CAMPS||metaCampSel.size===0) return md;
+  const base=filtroLct?META_DAILY_CAMPS?.lct:META_DAILY_CAMPS?.all;
+  if(!base) return md;
+  const selected=[...metaCampSel].map(c=>applyPeriod(base[c])).filter(Boolean);
+  if(!selected.length) return md;
+  if(selected.length===1) return selected[0];
+  const ref=applyPeriod(md);
+  const out={days:ref.days};
+  ['spend','impressions','link_clicks','page_view','leads'].forEach(k=>{
+    out[k]=ref.days.map(day=>selected.reduce((sum,s)=>{const i=s.days?.indexOf(day);return sum+(i>=0?(s[k]?.[i]||0):0);},0));
+  });
+  out.ctr=out.days.map((_,i)=>out.impressions[i]>0?r2(out.link_clicks[i]/out.impressions[i]*100):null);
+  out.connect_rate=out.days.map((_,i)=>out.link_clicks[i]>0?r2(out.page_view[i]/out.link_clicks[i]*100):null);
+  out.tx_conv=out.days.map((_,i)=>out.page_view[i]>0?r2(out.leads[i]/out.page_view[i]*100):null);
+  out.cpl=out.days.map((_,i)=>out.leads[i]>0?r2(out.spend[i]/out.leads[i]):null);
+  out.cpm=out.days.map((_,i)=>out.impressions[i]>0?r2(out.spend[i]/out.impressions[i]*1000):null);
+  return out;
+}
 
 function buildCampFilter(){
   const el=document.getElementById('campFilter');
