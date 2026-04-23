@@ -837,18 +837,27 @@ function toggleAdsetRow(campId,adsetName,campName,rowEl){
     if(!ads.length){inner.innerHTML='<div style="padding:8px;font-size:10px;color:var(--muted)">Sem criativos</div>';return;}
     const isMob=window.innerWidth<=768;
     if(isMob){
-      // Mobile: lista simples sem imagem
-      inner.innerHTML='<div style="display:flex;flex-direction:column;gap:1px;padding:4px 0">'+
-        ads.map(ad=>`
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-bottom:1px solid var(--border);gap:8px">
-            <div style="font-size:10px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1" title="${ad.n}">${ad.n}</div>
-            <div style="display:flex;gap:10px;flex-shrink:0;font-size:10px;font-family:monospace">
-              <span style="color:var(--muted2)">${fN(ad.ld)} leads</span>
-              <span class="${cplCls(ad.cpl)}">${fR(ad.cpl)}</span>
-              <span style="color:var(--muted2)">${fP(ad.ctr)}</span>
-            </div>
-          </div>`).join('')+
-        '</div>';
+      // Mobile: mesmo padrão visual dos conjuntos — tabela compacta com scroll
+      inner.innerHTML='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:400px">'+
+        '<thead><tr style="background:var(--surface2)">'+
+        '<th style="font-size:9px;padding:4px 8px;text-align:left;color:var(--muted2)">Criativo</th>'+
+        '<th class="num" style="font-size:9px;padding:4px 8px;color:var(--muted2)">Invest.</th>'+
+        '<th class="num" style="font-size:9px;padding:4px 8px;color:var(--muted2)">Leads</th>'+
+        '<th class="num" style="font-size:9px;padding:4px 8px;color:var(--muted2)">CTR</th>'+
+        '<th class="num" style="font-size:9px;padding:4px 8px;color:var(--muted2)">C.Rate</th>'+
+        '<th class="num" style="font-size:9px;padding:4px 8px;color:var(--muted2)">Tx.Conv</th>'+
+        '<th class="num" style="font-size:9px;padding:4px 8px;color:var(--muted2)">CPL</th>'+
+        '</tr></thead><tbody>'+
+        ads.map(ad=>`<tr>
+          <td style="font-size:10px;padding:5px 8px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${ad.n}">${ad.n}</td>
+          <td class="num" style="font-size:10px;padding:5px 8px">${fR(ad.spend)}</td>
+          <td class="num" style="font-size:10px;padding:5px 8px">${fN(ad.ld)}</td>
+          <td class="num ${funnelCls(ad.ctr,CTR_BOM,CTR_MEDIO).cls}" style="font-size:10px;padding:5px 8px">${fP(ad.ctr)}</td>
+          <td class="num" style="font-size:10px;padding:5px 8px;color:var(--muted2)">${fP(ad.cr||null)}</td>
+          <td class="num ${funnelCls(ad.tx_cv,TX_CONV_BOM,TX_CONV_MEDIO).cls}" style="font-size:10px;padding:5px 8px">${fP(ad.tx_cv||null)}</td>
+          <td class="num ${cplCls(ad.cpl)}" style="font-size:10px;padding:5px 8px">${fR(ad.cpl)}</td>
+        </tr>`).join('')+
+        '</tbody></table></div>';
     } else {
       // Desktop: grid com imagem
       inner.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;padding:10px 10px 10px 0">'+
