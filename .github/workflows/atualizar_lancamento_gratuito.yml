@@ -2,7 +2,10 @@ name: Atualizar Dashboard Lançamento Gratuito
 
 on:
   schedule:
-    - cron: '0 9 * * *'   # 06:00 Brasília = 09:00 UTC
+    - cron: '0 9 * * *'    # 06:00 Brasília
+    - cron: '0 15 * * *'   # 12:00 Brasília
+    - cron: '0 21 * * *'   # 18:00 Brasília
+    - cron: '0 3 * * *'    # 00:00 Brasília
   workflow_dispatch:        # botão para rodar manualmente também
 
 jobs:
