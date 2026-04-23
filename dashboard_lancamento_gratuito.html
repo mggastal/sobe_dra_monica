@@ -657,10 +657,10 @@ function getMT(){
   _calcRawRunning=false;
   return result||((filtroLct?META_TABLES?.lct:META_TABLES?.all)||{})['all']||null;
 }
-function filterBdRaw(rawArr, keyFn, dims){
-  // Agregar array raw por dimensões, filtrado pelo período atual
+function filterBdRaw(rawArr, keyFn){
   const hoje=getHoje();
   const filtered=(rawArr||[]).filter(r=>{
+    if(filtroLct && !r.lct) return false;
     const dt=parseDayStr(r.d);
     if(periodDays>0){
       const fimBD=new Date(hoje);if(periodDays===1)fimBD.setDate(fimBD.getDate()-1);fimBD.setHours(23,59,59);
@@ -674,23 +674,32 @@ function filterBdRaw(rawArr, keyFn, dims){
   const map={};
   filtered.forEach(r=>{
     const k=keyFn(r);
-    if(!map[k]) map[k]={n:k,spend:0,pur:0};
-    map[k].spend+=r.sp; map[k].pur+=r.pur;
+    if(!map[k]) map[k]={n:k,spend:0,ld:0};
+    map[k].spend+=r.sp; map[k].ld+=r.ld;
   });
   return Object.values(map)
     .filter(v=>v.spend>0)
-    .map(v=>({...v,spend:r2(v.spend),cpa:v.pur>0?r2(v.spend/v.pur):null}))
-    .sort((a,b)=>b.spend-a.spend);
+    .map(v=>({...v,spend:r2(v.spend),cpl:v.ld>0?r2(v.spend/v.ld):null}))
+    .sort((a,b)=>b.ld-a.ld);
 }
 
 function getMBD(){
   if(!META_BD) return null;
   const key=getPeriodKey();
-  if(key) return META_BD[key]||META_BD['all']||null;
-  // Datas livres: calcular do raw se disponível
+  // Dados pré-calculados: respeitar filtroLct (lct vs all)
+  if(key){
+    const base=filtroLct?META_BD?.lct:META_BD?.all;
+    if(base) return base[key]||base['all']||null;
+    // Fallback: estrutura antiga sem lct/all
+    return META_BD[key]||META_BD['all']||null;
+  }
+  // Datas livres: calcular do raw com filtro lct incluso no filterBdRaw
   const rawGa=META_BD._raw_ga;
   const rawPt=META_BD._raw_pt;
-  if(!rawGa&&!rawPt) return META_BD['all']||null;
+  if(!rawGa&&!rawPt){
+    const base=filtroLct?META_BD?.lct:META_BD?.all;
+    return base?.['all']||META_BD['all']||null;
+  }
   const AGE_ORDER=["18-24","25-34","35-44","45-54","55-64","65+"];
   const age=filterBdRaw(rawGa,r=>r.age).filter(v=>AGE_ORDER.includes(v.n))
     .sort((a,b)=>AGE_ORDER.indexOf(a.n)-AGE_ORDER.indexOf(b.n));
@@ -707,10 +716,11 @@ function buildTable(elId,data,mainCol){
     {k:'spend',l:'Invest.',f:fR},
     {k:'imp',l:'Impr.',cls:'cn'},{k:'lc',l:'Cliques',cls:'cn'},{k:'pv',l:'PV',cls:'cn'},
     {k:'ld',l:'Leads',f:fN},
-    {k:'ctr',l:'CTR',f:fP},{k:'cr',l:'C.Rate',f:fP},
-    {k:'tx_cv',l:'Tx.Conv',f:fP},
+    {k:'ctr',l:'CTR',f:fP,cls2:v=>funnelCls(v,CTR_BOM,CTR_MEDIO).cls},
+    {k:'cr',l:'C.Rate',f:fP,cls2:v=>funnelCls(v,CR_BOM,CR_MEDIO).cls},
+    {k:'tx_cv',l:'Tx.Conv',f:fP,cls2:v=>funnelCls(v,TX_CONV_BOM,TX_CONV_MEDIO).cls},
     {k:'cpl',l:'CPL',f:fR,cls2:cplCls},
-    {k:'cpm',l:'CPM',f:fR,cls2:cpmCls},
+    {k:'cpm',l:'CPM',f:fR},  // neutro — sem cor
   ];
   const head='<tr><th></th><th>'+mainCol+'</th>'+COLS.map(c=>'<th class="num">'+c.l+'</th>').join('')+'</tr>';
   
@@ -760,11 +770,11 @@ function buildTable(elId,data,mainCol){
             '<td class="num" style="padding:8px 10px;color:var(--muted2)">'+fN(tot.lc)+'</td>'+
             '<td class="num" style="padding:8px 10px;color:var(--muted2)">'+fN(tot.pv)+'</td>'+
             '<td class="num" style="padding:8px 10px;font-weight:700">'+fN(tot.ld)+'</td>'+
-            '<td class="num" style="padding:8px 10px">'+fP(ctr)+'</td>'+
-            '<td class="num" style="padding:8px 10px">'+fP(cr)+'</td>'+
-            '<td class="num" style="padding:8px 10px">'+fP(txcv)+'</td>'+
+            '<td class="num '+funnelCls(ctr,CTR_BOM,CTR_MEDIO).cls+'" style="padding:8px 10px">'+fP(ctr)+'</td>'+
+            '<td class="num '+funnelCls(cr,CR_BOM,CR_MEDIO).cls+'" style="padding:8px 10px">'+fP(cr)+'</td>'+
+            '<td class="num '+funnelCls(txcv,TX_CONV_BOM,TX_CONV_MEDIO).cls+'" style="padding:8px 10px">'+fP(txcv)+'</td>'+
             '<td class="num '+cplCls(cpl)+'" style="padding:8px 10px">'+fR(cpl)+'</td>'+
-            '<td class="num '+cpmCls(cpm)+'" style="padding:8px 10px">'+fR(cpm)+'</td>';
+            '<td class="num" style="padding:8px 10px">'+fR(cpm)+'</td>';
         })()}
       </tr>
     </tfoot>
@@ -790,6 +800,7 @@ function toggleCampRow(id,rowEl){
       '<th class="num" style="font-size:9px;padding:4px 8px;color:var(--muted2)">Invest.</th>'+
       '<th class="num" style="font-size:9px;padding:4px 8px;color:var(--muted2)">Leads</th>'+
       '<th class="num" style="font-size:9px;padding:4px 8px;color:var(--muted2)">CTR</th>'+
+      '<th class="num" style="font-size:9px;padding:4px 8px;color:var(--muted2)">C.Rate</th>'+
       '<th class="num" style="font-size:9px;padding:4px 8px;color:var(--muted2)">Tx.Conv</th>'+
       '<th class="num" style="font-size:9px;padding:4px 8px;color:var(--muted2)">CPL</th>'+
       '</tr></thead><tbody>'+
@@ -797,12 +808,13 @@ function toggleCampRow(id,rowEl){
         <td style="font-size:10px;padding:5px 8px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${a.n}">▶ ${a.n}</td>
         <td class="num" style="font-size:10px;padding:5px 8px">${fR(a.spend)}</td>
         <td class="num" style="font-size:10px;padding:5px 8px">${fN(a.ld)}</td>
-        <td class="num" style="font-size:10px;padding:5px 8px">${fP(a.ctr)}</td>
-        <td class="num" style="font-size:10px;padding:5px 8px">${fP(a.tx_cv)}</td>
+        <td class="num ${funnelCls(a.ctr,CTR_BOM,CTR_MEDIO).cls}" style="font-size:10px;padding:5px 8px">${fP(a.ctr)}</td>
+        <td class="num ${funnelCls(a.cr,CR_BOM,CR_MEDIO).cls}" style="font-size:10px;padding:5px 8px">${fP(a.cr)}</td>
+        <td class="num ${funnelCls(a.tx_cv,TX_CONV_BOM,TX_CONV_MEDIO).cls}" style="font-size:10px;padding:5px 8px">${fP(a.tx_cv)}</td>
         <td class="num ${cplCls(a.cpl)}" style="font-size:10px;padding:5px 8px">${fR(a.cpl)}</td>
       </tr>
       <tr id="ads_${id}_${a.n.replace(/[^a-zA-Z0-9]/g,'_')}" style="display:none">
-        <td colspan="6" style="padding:0 0 0 20px;background:var(--bg)">
+        <td colspan="7" style="padding:0 0 0 20px;background:var(--bg)">
           <div id="ads_inner_${id}_${a.n.replace(/[^a-zA-Z0-9]/g,'_')}"></div>
         </td>
       </tr>`).join('')+'</tbody>';
