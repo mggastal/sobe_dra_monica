@@ -78,7 +78,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 .f-step{display:flex;flex-direction:column;}
 .f-bar{height:40px;border-radius:7px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;transition:width .4s;min-width:80px;}
 .f-bar-lbl{font-size:12px;font-weight:600;color:#fff;}
-.f-bar.narrow .f-bar-lbl,.f-bar.narrow .f-bar-val{color:#111;}
+.f-bar.narrow .f-bar-lbl,.f-bar.narrow .f-bar-val{color:#fff;}
 .f-bar-val{font-family:'DM Mono',monospace;font-size:14px;font-weight:700;color:#fff;}
 .f-between{display:flex;align-items:center;gap:8px;padding:4px 0 4px 12px;}
 .f-arrow{color:var(--muted2);font-size:14px;}
@@ -202,11 +202,10 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 <aside class="sb" id="sidebar">
   <div class="sb-logo">
     <div class="logo-box" id="logoBox">C</div>
-    <div><div class="logo-name" id="sbNome">Dashboard</div><div class="logo-sub">Gratuito</div></div>
+    <div><div class="logo-name" id="sbNome">Dashboard</div><div class="logo-sub">Lançamento</div></div>
   </div>
   <nav class="sb-nav">
-    <button class="sb-item active" onclick="goPage('overview',this)"><span class="ico">📊</span>Overview</button>
-    <button class="sb-item" onclick="goPage('meta',this)"><span class="ico">🎯</span>Meta Ads</button>
+    <button class="sb-item active" onclick="goPage('meta',this)"><span class="ico">🎯</span>Meta Ads</button>
     <button class="sb-item" onclick="goPage('diario',this)"><span class="ico">📈</span>Métricas Diárias</button>
     <button class="sb-item" id="sbPesquisa" onclick="goPage('pesquisa',this)"><span class="ico">🔍</span>Pesquisa</button>
   </nav>
@@ -245,44 +244,23 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 
   <div class="content">
 
-    <!-- OVERVIEW -->
-    <div class="page-section active" id="page-overview">
-      <div class="krow k5 mb14" id="ovKpis"></div>
-      <div class="funnel-card"><div class="funnel-title">Funil de Captação de Leads</div><div class="funnel-steps" id="funnelSteps"></div></div>
-      <!-- Gráfico diário largura total -->
+    <!-- META ADS (aba principal) -->
+    <div class="page-section active" id="page-meta">
+      <div class="krow k3 mb14" id="metaKpis"></div>
+      <!-- Funil -->
+      <div class="funnel-card mb14"><div class="funnel-title">Funil de Captação</div><div class="funnel-steps" id="funnelSteps"></div></div>
+      <!-- Gráfico Leads · Investimento · CPL -->
       <div class="cc mb14">
         <div class="cc-t">Leads Diários & Investimento</div>
-        <div class="cc-s">Leads (barras azuis) · Invest. Meta (linha verde) · CPL (linha preta)</div>
-        <div class="cw" style="height:230px"><canvas id="chOvMain"></canvas></div>
-      </div>
-      <!-- Origem (30%) + Produto (70%) -->
-      <div class="ov-bottom" style="display:grid;grid-template-columns:3fr 7fr;gap:12px;margin-bottom:14px;">
-        <div class="cc">
-          <div class="cc-t">Vendas por Origem</div>
-          <div class="cc-s">Tráfego Pago vs Orgânico · Last Click antes da compra</div>
-          <div class="cw" style="height:180px"><canvas id="chOvOrigem"></canvas></div>
-        </div>
-        <div class="cc">
-          <div class="cc-t">Leads por Campanha</div>
-          <div class="cc-s" id="ccCampSub">por origem</div>
-          <div id="tPorCamp"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- META ADS -->
-    <div class="page-section" id="page-meta">
-      <div class="krow k5 mb14" id="metaKpis"></div>
-      <div class="cc mb14">
-        <div class="cc-t">Leads · Investimento · CPL</div>
         <div class="cc-s">Leads (barras azuis) · Invest. (linha verde) · CPL (linha preta tracejada)</div>
         <div class="cw" style="height:210px"><canvas id="chMetaMain"></canvas></div>
       </div>
+      <!-- Campanhas -->
       <div class="section">
         <div class="sec-hd">Campanhas</div>
         <div class="tc" id="tCamps"></div>
       </div>
-
+      <!-- Segmentação -->
       <div class="section" style="margin-top:16px">
         <div class="sec-hd">Segmentação</div>
         <div class="g3">
@@ -291,7 +269,6 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
           <div><div class="seg-ttl">Posicionamento</div><div class="seg-card" id="tPlatform"></div></div>
         </div>
       </div>
-
       <!-- Ranking de Criativos -->
       <div class="section" style="margin-top:16px">
         <div class="sec-hd">Ranking de Criativos</div>
@@ -348,20 +325,20 @@ const META_BD     = null;
 const PESQUISA     = null;
 
 // ═══ CONFIG ═══
-const LANCAMENTO_COD='LCT01';
+const LANCAMENTO_COD='RDC01';
 const NOME_CLIENTE='Cliente';
 const LOGO_LETRA='C';
-const COR_ACENTO='#0ea5e9';
-const CPL_BOM=5;
-const CPL_MEDIO=12;
-const TX_LEAD_BOM=20.0;
-const TX_LEAD_MEDIO=10.0;
-const CTR_BOM=1.5;
+const COR_ACENTO='#e11d48';
+const CPL_BOM=5.0;
+const CPL_MEDIO=10.0;
+const CTR_BOM=1.2;
 const CTR_MEDIO=0.8;
-const CR_BOM=65.0;
-const CR_MEDIO=45.0;
+const CR_BOM=40.0;
+const CR_MEDIO=25.0;
 const TX_CONV_BOM=30.0;
 const TX_CONV_MEDIO=15.0;
+const CPM_BOM=5.0;
+const CPM_MEDIO=12.0;
 
 // ═══ ESTADO ═══
 let filtroLct=true, periodDays=30, dateI=null, dateF=null, showLabels=true;
@@ -373,15 +350,16 @@ const fN=v=>v==null?'—':Number(v).toLocaleString('pt-BR');
 const fP=v=>v==null?'—':Number(v).toFixed(2)+'%';
 const r2=v=>Math.round(v*100)/100;
 const avg=arr=>{const v=arr?.filter(x=>x!=null&&!isNaN(x));return v?.length?r2(v.reduce((a,b)=>a+b,0)/v.length):null;};
-
+// CPL: menor = melhor
+function cplCls(v){return !v?'cn':v<=CPL_BOM?'cg':v<=CPL_MEDIO?'cw2':'cr';}
 function funnelCls(v,bom,medio){
-  // Taxas: maior = melhor
   if(v==null||isNaN(v)) return {cls:'cn',col:'var(--muted)'};
   if(v>=bom)   return {cls:'cg',col:'#059669'};
   if(v>=medio) return {cls:'cw2',col:'#d97706'};
   return {cls:'cr',col:'#dc2626'};
 }
-function cplCls(v){return !v?'cn':v<=CPL_BOM?'cg':v<=CPL_MEDIO?'cw2':'cr';}
+// CPM: menor = melhor
+function cpmCls(v){return !v?'cn':v<=CPM_BOM?'cg':v<=CPM_MEDIO?'cw2':'cr';}
 const DARK=()=>document.documentElement.getAttribute('data-theme')==='dark';
 const TXT=()=>DARK()?'#8b95a9':'#6b7280';
 const GRID=()=>DARK()?'rgba(255,255,255,.05)':'rgba(0,0,0,.05)';
@@ -448,7 +426,6 @@ function applyPeriod(daily){
 
 function getMD(){return applyPeriod(getMDraw());}
 
-
 // ═══ CHARTS ═══
 const CH={},PC={};
 function dc(id){if(CH[id]){CH[id].destroy();delete CH[id];}}
@@ -482,154 +459,92 @@ const FUNIL_COLOR='#3b82f6';
 const FUNIL_GREEN='#059669';
 function hexA(hex,a){return hex+Math.round(a*255).toString(16).padStart(2,'0');}
 
-function filterRawByPeriod(rawArr){
-  const hoje=getHoje();
-  return(rawArr||[]).filter(r=>{
-    if(filtroLct&&!r.lct)return false;
-    const dt=parseDayStr(r.d);
-    if(periodDays>0){
-      const fim=new Date(hoje);if(periodDays===1)fim.setDate(fim.getDate()-1);fim.setHours(23,59,59);
-      const ini=new Date(fim);ini.setDate(ini.getDate()-(periodDays===1?0:periodDays-1));ini.setHours(0,0,0,0);
-      if(dt<ini||dt>fim)return false;
-    }
-    if(dateI&&dt<dateI)return false;if(dateF&&dt>dateF)return false;return true;
-  });
-}
-
 function buildFunnel(mk){
   if(!mk) return;
-  function hexA(h,a){return h+Math.round(a*255).toString(16).padStart(2,'0');}
-  const C=COR_ACENTO;
   const steps=[
-    {lbl:'Impressões', val:mk.impressions, color:hexA(C,1.0)},
-    {lbl:'Link Clicks', val:mk.link_clicks, color:hexA(C,0.82)},
-    {lbl:'Page Views',  val:mk.page_view,   color:hexA(C,0.65)},
-    {lbl:'Leads',       val:mk.leads,       color:'#059669'},
+    {lbl:'Impressões',  val:mk.impressions,  color:hexA(FUNIL_COLOR,1.0)},
+    {lbl:'Link Clicks', val:mk.link_clicks,  color:hexA(FUNIL_COLOR,0.75)},
+    {lbl:'Page Views',  val:mk.page_view,    color:hexA(FUNIL_COLOR,0.50)},
+    {lbl:'Leads',       val:mk.leads,        color:FUNIL_GREEN},
   ];
   const rates=[
-    {lbl:'CTR',            val:mk.ctr,          bom:CTR_BOM,    medio:CTR_MEDIO},
-    {lbl:'Connect Rate',   val:mk.connect_rate, bom:CR_BOM,     medio:CR_MEDIO},
-    {lbl:'Taxa Lead (LP)', val:mk.tx_lead,      bom:TX_LEAD_BOM,medio:TX_LEAD_MEDIO},
+    {lbl:'CTR',           val:mk.ctr,           bom:CTR_BOM,      medio:CTR_MEDIO},
+    {lbl:'Connect Rate',  val:mk.connect_rate,  bom:CR_BOM,       medio:CR_MEDIO},
+    {lbl:'Taxa Conversão (Lead/PV)', val:mk.tx_conv, bom:TX_CONV_BOM, medio:TX_CONV_MEDIO},
   ];
-  const maxO=Math.max(mk.link_clicks||1,mk.page_view||1,mk.leads||1,1);
-  const widths=steps.map((s,i)=>i===0?100:Math.max(16,Math.round((s.val||0)/maxO*88)));
+
+  const maxOther=Math.max(mk.link_clicks||1,mk.page_view||1,mk.leads||1,1);
+  const widths=steps.map((s,i)=>i===0?100:Math.max(12,Math.round((s.val||0)/maxOther*88)));
+  // Garantir hierarquia visual — cada etapa menor que anterior
+  for(let i=3;i>=1;i--){ if(widths[i]>=widths[i-1]) widths[i]=Math.max(12, widths[i-1]-8); }
+
   const el=document.getElementById('funnelSteps');
   let html='';
   steps.forEach((s,i)=>{
-    html+=`<div class="f-step"><div class="f-bar${widths[i]<35?' narrow':''}" style="width:${widths[i]}%;background:${s.color}"><span class="f-bar-lbl">${s.lbl}</span><span class="f-bar-val">${fN(s.val)}</span></div>`;
-    if(i<rates.length){const r=rates[i];const c=funnelCls(r.val,r.bom,r.medio);html+=`<div class="f-between"><span class="f-arrow" style="color:${c.col}">↓</span><span class="f-rate-txt" style="background:${c.col}18;color:${c.col};border:1px solid ${c.col}44"><strong>${fP(r.val)}</strong> ${r.lbl}</span></div>`;}
+    html+=`<div class="f-step">
+      <div class="f-bar${widths[i]<35?' narrow':''}" style="width:${widths[i]}%;background:${s.color}">
+        <span class="f-bar-lbl">${s.lbl}</span>
+        <span class="f-bar-val">${fN(s.val)}</span>
+      </div>`;
+    if(i<rates.length){
+      const r=rates[i];
+      const c=funnelCls(r.val,r.bom,r.medio);
+      html+=`<div class="f-between">
+        <span class="f-arrow" style="color:${c.col}">↓</span>
+        <span class="f-rate-txt" style="background:${c.col}18;color:${c.col};border:1px solid ${c.col}44">
+          <strong>${fP(r.val)}</strong> ${r.lbl}
+        </span>
+      </div>`;
+    }
     html+='</div>';
   });
-  const txC=funnelCls(mk.tx_conv,TX_CONV_BOM,TX_CONV_MEDIO);
-  if(mk.tx_conv!=null) html+=`<div style="margin-top:8px;padding:5px 12px;display:flex;align-items:center;gap:8px;background:${txC.col}12;border-radius:8px;border:1px solid ${txC.col}33"><span style="font-size:11px;color:var(--muted)">Taxa de Conversão (PV→Lead)</span><span style="font-size:15px;font-weight:800;color:${txC.col}">${fP(mk.tx_conv)}</span></div>`;
   el.innerHTML=html;
 }
 
-// ═══ OVERVIEW ═══
-function renderOverview(){
-  const md=getMD();
-  if(!md){return;}
-  const sp=md.spend?.reduce((a,b)=>a+(b||0),0)||0;
-  const ld=md.leads?.reduce((a,b)=>a+(b||0),0)||0;
-  const imp=md.impressions?.reduce((a,b)=>a+(b||0),0)||0;
-  const lc=md.link_clicks?.reduce((a,b)=>a+(b||0),0)||0;
-  const pv=md.page_view?.reduce((a,b)=>a+(b||0),0)||0;
-  const cpl=sp>0&&ld>0?r2(sp/ld):null;
-  const ctr=imp>0?r2(lc/imp*100):null;
-  const cpm=imp>0?r2(sp/imp*1000):null;
-
-  document.getElementById('ovKpis').innerHTML=`
-    <div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Investimento</div><div class="kpi-val" style="font-size:16px">${fR(sp)}</div><div class="kpi-sub">Meta Ads</div></div>
-    <div class="kpi" style="--kc:${COR_ACENTO}"><div class="kpi-lbl">Leads Captados</div><div class="kpi-val" style="font-size:16px;color:${COR_ACENTO}">${fN(ld)}</div><div class="kpi-sub">no período</div></div>
-    <div class="kpi" style="--kc:${cplCls(cpl)==='cg'?'#059669':cplCls(cpl)==='cw2'?'#d97706':'#dc2626'}"><div class="kpi-lbl">CPL</div><div class="kpi-val ${cplCls(cpl)}">${fR(cpl)}</div><div class="kpi-sub">Custo por lead</div></div>
-    <div class="kpi" style="--kc:#334155"><div class="kpi-lbl">CTR Médio</div><div class="kpi-val">${fP(ctr)}</div><div class="kpi-sub">Link clicks / Impr.</div></div>
-    <div class="kpi" style="--kc:#334155"><div class="kpi-lbl">CPM Médio</div><div class="kpi-val">${fR(cpm)}</div><div class="kpi-sub">Custo por mil impr.</div></div>`;
-
-  buildFunnel({impressions:imp,link_clicks:lc,page_view:pv,leads:ld,spend:sp,
-    ctr:imp>0?r2(lc/imp*100):null,connect_rate:lc>0?r2(pv/lc*100):null,
-    tx_lead:pv>0?r2(ld/pv*100):null,tx_conv:pv>0?r2(ld/pv*100):null});
-
-  dc('chOvMain');
-  CH['chOvMain']=new Chart(document.getElementById('chOvMain'),{
-    data:{labels:md.days,datasets:[
-      {label:'Leads',data:md.leads,backgroundColor:COR_ACENTO+'bb',borderRadius:3,type:'bar',yAxisID:'y1',
-       datalabels:{display:ctx=>showLabels,color:COR_ACENTO,font:{size:8,weight:'bold'},formatter:(v,ctx)=>{if(v==null)return null;const tot=ctx.dataset.data.filter(x=>x!=null).length;if(tot>18&&ctx.dataIndex%3!==0)return null;return fN(v);},anchor:'end',align:'top',offset:2,clip:false}},
-      {label:'Invest.',data:md.spend,borderColor:'#059669',backgroundColor:'transparent',tension:.3,pointRadius:2,borderWidth:2,type:'line',spanGaps:true,datalabels:{display:false}},
-      {label:'CPL',data:md.cpl,borderColor:'#111',borderDash:[5,3],backgroundColor:'transparent',tension:.3,pointRadius:2,borderWidth:1.5,type:'line',yAxisID:'y2',spanGaps:true,datalabels:{display:ctx=>showLabels,color:'#333',font:{size:8,weight:'bold'},formatter:v=>v!=null?'R$'+v.toFixed(0):null,anchor:'end',align:'top',offset:2,clip:false}},
-    ]},
-    options:{...bo(),scales:{
-      x:{ticks:{color:TXT(),font:bf,maxTicksLimit:14},grid:{color:GRID()}},
-      y:{ticks:{color:TXT(),font:bf,callback:v=>'R$'+v.toLocaleString()},grid:{color:GRID()}},
-      y1:{position:'right',ticks:{color:COR_ACENTO,font:bf},grid:{display:false},grace:'20%'},
-      y2:{position:'right',ticks:{color:'#555',font:bf,callback:v=>'R$'+v.toFixed(0)},grid:{display:false},offset:true},
-    }}
-  });
-
-  if(META_RAW_CAMP?.length){
-    const rawF=filterRawByPeriod(META_RAW_CAMP);
-    const pagoCnt=rawF.reduce((s,r)=>s+(r.leads_pago||0),0);
-    const orgCnt=rawF.reduce((s,r)=>s+(r.leads_org||0),0);
-    dc('chOvOrigem');
-    CH['chOvOrigem']=new Chart(document.getElementById('chOvOrigem'),{type:'doughnut',
-      data:{labels:['Tráfego Pago','Orgânico'],datasets:[{data:[pagoCnt,orgCnt],backgroundColor:[COR_ACENTO,'#0284c7'],borderWidth:0}]},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{
-        legend:{position:'bottom',labels:{color:TXT(),font:bf,padding:10,boxWidth:10}},
-        datalabels:{display:true,color:'#fff',font:{size:11,weight:'bold'},
-          formatter:(v,ctx)=>{const t=ctx.dataset.data.reduce((a,b)=>a+b,0);return t>0?fN(v)+'\n'+(v/t*100).toFixed(0)+'%':null;}}
-      }}
-    });
-    const campMap={};
-    rawF.forEach(r=>{if(!campMap[r.c])campMap[r.c]={camp:r.c,leads:0,spend:0};campMap[r.c].leads+=r.leads||0;campMap[r.c].spend+=r.sp||0;});
-    const camps=Object.values(campMap).map(c=>({...c,spend:r2(c.spend),cpl:c.leads>0?r2(c.spend/c.leads):null})).sort((a,b)=>b.leads-a.leads);
-    const sub=document.getElementById('ccCampSub');if(sub)sub.textContent=periodDays>0?`últimos ${periodDays}d`:'período total';
-    const el=document.getElementById('tPorCamp');
-    if(el){
-      if(!camps.length){el.innerHTML='<div style="padding:12px;color:var(--muted);font-size:12px">Sem leads no período</div>';return;}
-      el.innerHTML=`<table style="width:100%;border-collapse:collapse"><thead><tr style="background:var(--surface2)">
-        <th style="font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:700;padding:6px 10px;text-align:left">Campanha</th>
-        <th style="font-size:9px;text-transform:uppercase;color:${COR_ACENTO};font-weight:700;padding:6px 10px;text-align:right">Leads</th>
-        <th style="font-size:9px;text-transform:uppercase;color:${COR_ACENTO};font-weight:700;padding:6px 10px;text-align:right">CPL</th>
-        <th style="font-size:9px;text-transform:uppercase;color:var(--muted);font-weight:700;padding:6px 10px;text-align:right">Invest.</th>
-      </tr></thead><tbody>${camps.map(c=>`<tr>
-        <td style="font-size:11px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:6px 10px;border-bottom:1px solid var(--border)" title="${c.camp}">${c.camp}</td>
-        <td style="font-size:11px;text-align:right;padding:6px 10px;font-family:monospace;border-bottom:1px solid var(--border);font-weight:700">${fN(c.leads)}</td>
-        <td class="${cplCls(c.cpl)}" style="font-size:11px;text-align:right;padding:6px 10px;font-family:monospace;border-bottom:1px solid var(--border)">${fR(c.cpl)}</td>
-        <td style="font-size:11px;text-align:right;padding:6px 10px;font-family:monospace;border-bottom:1px solid var(--border);color:var(--muted)">${fR(c.spend)}</td>
-      </tr>`).join('')}</tbody></table>`;
-    }
-  }
-}
-
-// ═══ META ADS ═══
+// ═══ META ADS (aba principal) ═══
 function renderMeta(){
-  const md=getMD(); const mt=getMT();
-  if(!md) return;
-  const sp=md.spend?.reduce((a,b)=>a+(b||0),0)||0;
-  const ld=md.leads?.reduce((a,b)=>a+(b||0),0)||0;
-  const imp=md.impressions?.reduce((a,b)=>a+(b||0),0)||0;
-  const lc=md.link_clicks?.reduce((a,b)=>a+(b||0),0)||0;
-  const cpl=sp>0&&ld>0?r2(sp/ld):null;
-  const ctr=imp>0?r2(lc/imp*100):null;
-  const cpm=imp>0?r2(sp/imp*1000):null;
-  document.getElementById('metaKpis').innerHTML=`
-    <div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Investimento</div><div class="kpi-val" style="font-size:16px">${fR(sp)}</div></div>
-    <div class="kpi" style="--kc:${COR_ACENTO}"><div class="kpi-lbl">Leads</div><div class="kpi-val" style="font-size:16px;color:${COR_ACENTO}">${fN(ld)}</div></div>
-    <div class="kpi" style="--kc:${cplCls(cpl)==='cg'?'#059669':cplCls(cpl)==='cw2'?'#d97706':'#dc2626'}"><div class="kpi-lbl">CPL</div><div class="kpi-val ${cplCls(cpl)}">${fR(cpl)}</div></div>
-    <div class="kpi" style="--kc:#334155"><div class="kpi-lbl">CTR</div><div class="kpi-val">${fP(ctr)}</div></div>
-    <div class="kpi" style="--kc:#334155"><div class="kpi-lbl">CPM</div><div class="kpi-val">${fR(cpm)}</div></div>`;
+  const mk=getMK(); const md=getMD(); const mt=getMT();
+  if(!mk||!md) return;
 
+  // KPIs filtrados pelo período
+  const spMK=md?.spend?.reduce((a,b)=>a+(b||0),0)||0;
+  const ldMK=md?.leads?.reduce((a,b)=>a+(b||0),0)||0;
+  const cplMK=spMK>0&&ldMK>0?r2(spMK/ldMK):null;
+  const cplCor=cplMK!=null?(cplMK<=CPL_BOM?'#059669':cplMK<=CPL_MEDIO?'#d97706':'#dc2626'):'var(--muted)';
+  document.getElementById('metaKpis').innerHTML=`
+    <div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Investimento</div><div class="kpi-val" style="font-size:16px;color:var(--text)">${fR(spMK)}</div><div class="kpi-sub">Meta Ads</div></div>
+    <div class="kpi" style="--kc:#3b82f6"><div class="kpi-lbl">Leads</div><div class="kpi-val" style="color:var(--text)">${fN(ldMK)}</div><div class="kpi-sub">captados no período</div></div>
+    <div class="kpi" style="--kc:${cplCor}"><div class="kpi-lbl">CPL</div><div class="kpi-val" style="color:${cplCor}">${fR(cplMK)}</div><div class="kpi-sub">Custo por Lead</div></div>`;
+
+  // Funil recalculado do período
+  const funnelKpis={
+    impressions: md.impressions?.reduce((a,b)=>a+(b||0),0)||0,
+    link_clicks: md.link_clicks?.reduce((a,b)=>a+(b||0),0)||0,
+    page_view:   md.page_view?.reduce((a,b)=>a+(b||0),0)||0,
+    leads:       md.leads?.reduce((a,b)=>a+(b||0),0)||0,
+    spend:       spMK,
+  };
+  const imp2=funnelKpis.impressions,lc2=funnelKpis.link_clicks,pv2=funnelKpis.page_view,ld2=funnelKpis.leads;
+  funnelKpis.ctr=imp2>0?r2(lc2/imp2*100):null;
+  funnelKpis.connect_rate=lc2>0?r2(pv2/lc2*100):null;
+  funnelKpis.tx_conv=pv2>0?r2(ld2/pv2*100):null;
+  funnelKpis.cpl=ld2>0?r2(spMK/ld2):null;
+  setTimeout(()=>buildFunnel(funnelKpis),30);
+
+  // Gráfico Leads · Investimento · CPL
   dc('chMetaMain');
   CH['chMetaMain']=new Chart(document.getElementById('chMetaMain'),{
     data:{labels:md.days,datasets:[
-      {label:'Leads',data:md.leads,backgroundColor:COR_ACENTO+'bb',borderRadius:3,type:'bar',yAxisID:'y1',
-       datalabels:{display:ctx=>showLabels,color:COR_ACENTO,font:{size:8,weight:'bold'},formatter:(v,ctx)=>{if(v==null)return null;const tot=ctx.dataset.data.filter(x=>x!=null).length;if(tot>18&&ctx.dataIndex%3!==0)return null;return fN(v);},anchor:'end',align:'top',offset:2,clip:false}},
+      {label:'Leads',data:md.leads,backgroundColor:'rgba(59,130,246,.7)',borderRadius:3,type:'bar',yAxisID:'y1',
+       datalabels:{...makeDatalabels('#3b82f6','',v=>v!=null?fN(v):null),display:ctx=>showLabels}},
       {label:'Invest.',data:md.spend,borderColor:'#059669',backgroundColor:'transparent',tension:.3,pointRadius:2,borderWidth:2,type:'line',spanGaps:true,datalabels:{display:false}},
-      {label:'CPL',data:md.cpl,borderColor:'#111',borderDash:[5,3],backgroundColor:'transparent',tension:.3,pointRadius:2,borderWidth:1.5,type:'line',yAxisID:'y2',spanGaps:true,datalabels:{display:ctx=>showLabels,color:'#333',font:{size:8,weight:'bold'},formatter:v=>v!=null?'R$'+v.toFixed(0):null,anchor:'end',align:'top',offset:2,clip:false}},
+      {label:'CPL',data:md.cpl,borderColor:'#111',borderDash:[5,3],backgroundColor:'transparent',tension:.3,pointRadius:2,borderWidth:1.5,type:'line',yAxisID:'y2',spanGaps:true,
+       datalabels:{display:ctx=>showLabels,color:'#333',font:{size:8,weight:'bold'},formatter:v=>v!=null?'R$'+v.toFixed(0):null,anchor:'end',align:'top',offset:2,clip:false}},
     ]},
     options:{...bo(),scales:{
       x:{ticks:{color:TXT(),font:bf,maxTicksLimit:14},grid:{color:GRID()}},
       y:{ticks:{color:TXT(),font:bf,callback:v=>'R$'+v.toLocaleString()},grid:{color:GRID()}},
-      y1:{position:'right',ticks:{color:COR_ACENTO,font:bf},grid:{display:false}},
+      y1:{position:'right',ticks:{color:'#3b82f6',font:bf},grid:{display:false},grace:'20%'},
       y2:{position:'right',ticks:{color:'#555',font:bf,callback:v=>'R$'+v.toFixed(0)},grid:{display:false},offset:true},
     }}
   });
@@ -674,26 +589,25 @@ function calcTableFromRaw(){
   const adsetMap={};
   filtered.forEach(r=>{
     const ck=r.c;
-    if(!campMap[ck]) campMap[ck]={n:r.c,spend:0,imp:0,lc:0,pv:0,ic:0,pur:0,rev:0};
+    if(!campMap[ck]) campMap[ck]={n:r.c,spend:0,imp:0,lc:0,pv:0,ld:0};
     campMap[ck].spend+=r.sp; campMap[ck].imp+=r.imp; campMap[ck].lc+=r.lc;
-    campMap[ck].pv+=r.pv; campMap[ck].ic+=r.ic; campMap[ck].pur+=r.pur; campMap[ck].rev+=r.rev;
+    campMap[ck].pv+=r.pv; campMap[ck].ld+=r.ld;
     const ak=r.c+'|||'+r.a;
-    if(!adsetMap[ak]) adsetMap[ak]={n:r.a,camp:r.c,spend:0,imp:0,lc:0,pv:0,ic:0,pur:0,rev:0};
+    if(!adsetMap[ak]) adsetMap[ak]={n:r.a,camp:r.c,spend:0,imp:0,lc:0,pv:0,ld:0};
     adsetMap[ak].spend+=r.sp; adsetMap[ak].imp+=r.imp; adsetMap[ak].lc+=r.lc;
-    adsetMap[ak].pv+=r.pv; adsetMap[ak].ic+=r.ic; adsetMap[ak].pur+=r.pur; adsetMap[ak].rev+=r.rev;
+    adsetMap[ak].pv+=r.pv; adsetMap[ak].ld+=r.ld;
   });
 
   function calcRow(o){
-    const sp=r2(o.spend),pur=o.pur,imp=o.imp,lc=o.lc,pv=o.pv,ic=o.ic,rev=r2(o.rev);
-    return {...o, spend:sp, pur, imp, lc, pv, ic, rev,
+    const sp=r2(o.spend),ld=o.ld,imp=o.imp,lc=o.lc,pv=o.pv;
+    return {...o, spend:sp, ld, imp, lc, pv,
       ctr:imp>0?r2(lc/imp*100):null, cr:lc>0?r2(pv/lc*100):null,
-      tx_ic:pv>0?r2(ic/pv*100):null, tx_ck:ic>0?r2(pur/ic*100):null,
-      tx_cv:pv>0?r2(pur/pv*100):null, cpa:pur>0?r2(sp/pur):null,
-      roas:sp>0?r2(rev/sp):null, cpm:imp>0?r2(sp/imp*1000):null};
+      tx_cv:pv>0?r2(ld/pv*100):null,
+      cpl:ld>0?r2(sp/ld):null, cpm:imp>0?r2(sp/imp*1000):null};
   }
 
-  const camps=Object.values(campMap).map(calcRow).sort((a,b)=>b.pur-a.pur);
-  const adsets=Object.values(adsetMap).map(calcRow).sort((a,b)=>b.pur-a.pur);
+  const camps=Object.values(campMap).map(calcRow).sort((a,b)=>b.ld-a.ld);
+  const adsets=Object.values(adsetMap).map(calcRow).sort((a,b)=>b.ld-a.ld);
   // Ads: filtrar pelos adsets/camps que têm dados no período
   const campNamesInPeriod=new Set(camps.map(c=>c.n));
   const adsetPairs=new Set(adsets.map(a=>a.camp+'|||'+a.n));
@@ -760,12 +674,12 @@ function filterBdRaw(rawArr, keyFn, dims){
   const map={};
   filtered.forEach(r=>{
     const k=keyFn(r);
-    if(!map[k]) map[k]={n:k,spend:0,leads:0};
-    map[k].spend+=r.sp; map[k].leads+=r.leads||0;
+    if(!map[k]) map[k]={n:k,spend:0,pur:0};
+    map[k].spend+=r.sp; map[k].pur+=r.pur;
   });
   return Object.values(map)
     .filter(v=>v.spend>0)
-    .map(v=>({...v,spend:r2(v.spend),cpl:v.leads>0?r2(v.spend/v.leads):null}))
+    .map(v=>({...v,spend:r2(v.spend),cpa:v.pur>0?r2(v.spend/v.pur):null}))
     .sort((a,b)=>b.spend-a.spend);
 }
 
@@ -788,25 +702,73 @@ function getMBD(){
 function buildTable(elId,data,mainCol){
   if(!data?.length){document.getElementById(elId).innerHTML='<div style="padding:12px;color:var(--muted);font-size:12px">Sem dados</div>';return;}
   const mt=getMT();
+
   const COLS=[
-    {k:'spend',l:'Invest.',f:fR},{k:'imp',l:'Impr.',cls:'cn'},{k:'lc',l:'Cliques',cls:'cn'},
-    {k:'pv',l:'PV',cls:'cn'},{k:'leads',l:'Leads',f:fN},
+    {k:'spend',l:'Invest.',f:fR},
+    {k:'imp',l:'Impr.',cls:'cn'},{k:'lc',l:'Cliques',cls:'cn'},{k:'pv',l:'PV',cls:'cn'},
+    {k:'ld',l:'Leads',f:fN},
     {k:'ctr',l:'CTR',f:fP},{k:'cr',l:'C.Rate',f:fP},
-    {k:'tx_lead',l:'Tx.Lead',f:fP},{k:'cpl',l:'CPL',f:fR,cls2:cplCls},{k:'cpm',l:'CPM',f:fR}
+    {k:'tx_cv',l:'Tx.Conv',f:fP},
+    {k:'cpl',l:'CPL',f:fR,cls2:cplCls},
+    {k:'cpm',l:'CPM',f:fR,cls2:cpmCls},
   ];
   const head='<tr><th></th><th>'+mainCol+'</th>'+COLS.map(c=>'<th class="num">'+c.l+'</th>').join('')+'</tr>';
+  
   let rows='';
   data.forEach((r,i)=>{
     const cid='camp_'+elId+'_'+i;
-    const tds=COLS.map(c=>{const v=r[c.k];const cls2=c.cls2?c.cls2(v):'';const fmt=c.f?c.f(v):fN(v);return`<td class="num ${c.cls||''} ${cls2}" style="${c.cls==='cn'?'color:var(--muted2)':''}">${fmt}</td>`;}).join('');
-    rows+=`<tr style="cursor:pointer" onclick="toggleCampRow('${cid}',this)"><td style="width:20px;text-align:center;color:var(--muted2);font-size:11px" id="arrow_${cid}">▶</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;font-weight:600" title="${r.n}">${r.n}</td>${tds}</tr>`;
-    rows+=`<tr id="${cid}" style="display:none"><td colspan="${COLS.length+2}" style="padding:0"><div style="background:var(--surface2);border-top:1px solid var(--border);padding:8px 24px"><div style="font-size:10px;color:var(--muted2);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Conjuntos — ${r.n}</div><table style="width:100%;border-collapse:collapse" id="sub_${cid}"></table></div></td></tr>`;
+    const tds=COLS.map(c=>{
+      const v=r[c.k];
+      const cls2=c.cls2?c.cls2(v):'';
+      const cls=c.cls||'';
+      const fmt=c.f?c.f(v):fN(v);
+      return `<td class="num ${cls} ${cls2}" style="${cls==='cn'?'color:var(--muted2)':''}">${fmt}</td>`;
+    }).join('');
+    rows+=`<tr style="cursor:pointer" onclick="toggleCampRow('${cid}',this)">
+      <td style="width:20px;text-align:center;color:var(--muted2);font-size:11px" id="arrow_${cid}">▶</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;font-weight:600" title="${r.n}">${r.n}</td>
+      ${tds}
+    </tr>`;
+    // Sub-linhas: conjuntos desta campanha
+    const campAdsets=mt?.adsets?.filter(a=>a.n.includes(r.n.split('-').slice(-2).join('-'))||true)||[];
+    // Usar os anúncios agrupados por nome de campanha da tabela
+    const campName=r.n;
+    rows+=`<tr id="${cid}" style="display:none"><td colspan="${COLS.length+2}" style="padding:0">
+      <div style="background:var(--surface2);border-top:1px solid var(--border);padding:8px 24px">
+        <div style="font-size:10px;color:var(--muted2);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Conjuntos — ${campName}</div>
+        <table style="width:100%;border-collapse:collapse" id="sub_${cid}"></table>
+      </div>
+    </td></tr>`;
   });
-  const tot={spend:0,imp:0,lc:0,pv:0,leads:0};
-  data.forEach(r=>{tot.spend+=r.spend||0;tot.imp+=r.imp||0;tot.lc+=r.lc||0;tot.pv+=r.pv||0;tot.leads+=r.leads||0;});
-  const tCpl=tot.leads>0?r2(tot.spend/tot.leads):null,tCtr=tot.imp>0?r2(tot.lc/tot.imp*100):null;
-  const tCr=tot.lc>0?r2(tot.pv/tot.lc*100):null,tTx=tot.pv>0?r2(tot.leads/tot.pv*100):null,tCpm=tot.imp>0?r2(tot.spend/tot.imp*1000):null;
-  document.getElementById(elId).innerHTML=`<table style="min-width:800px"><thead>${head}</thead><tbody>${rows}</tbody><tfoot><tr style="background:var(--surface2);font-weight:700;border-top:2px solid var(--border)"><td></td><td style="font-size:10px;padding:6px 10px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px">Total</td><td class="num" style="padding:8px 10px">${fR(tot.spend)}</td><td class="num cn" style="padding:8px 10px">${fN(tot.imp)}</td><td class="num cn" style="padding:8px 10px">${fN(tot.lc)}</td><td class="num cn" style="padding:8px 10px">${fN(tot.pv)}</td><td class="num" style="padding:8px 10px">${fN(tot.leads)}</td><td class="num" style="padding:8px 10px">${fP(tCtr)}</td><td class="num" style="padding:8px 10px">${fP(tCr)}</td><td class="num" style="padding:8px 10px">${fP(tTx)}</td><td class="num ${cplCls(tCpl)}" style="padding:8px 10px">${fR(tCpl)}</td><td class="num" style="padding:8px 10px">${fR(tCpm)}</td></tr></tfoot></table>`;
+  
+  document.getElementById(elId).innerHTML=`<table style="min-width:800px">
+    <thead>${head}</thead><tbody>${rows}</tbody>
+    <tfoot>
+      <tr style="background:var(--surface2);font-weight:700;border-top:2px solid var(--border)">
+        <td></td>
+        <td style="font-size:10px;padding:6px 10px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px">Total</td>
+        ${(()=>{
+          const tot={spend:0,imp:0,lc:0,pv:0,ld:0};
+          data.forEach(r=>{tot.spend+=r.spend||0;tot.imp+=r.imp||0;tot.lc+=r.lc||0;tot.pv+=r.pv||0;tot.ld+=r.ld||0;});
+          const ctr=tot.imp>0?r2(tot.lc/tot.imp*100):null;
+          const cr=tot.lc>0?r2(tot.pv/tot.lc*100):null;
+          const txcv=tot.pv>0?r2(tot.ld/tot.pv*100):null;
+          const cpl=tot.ld>0?r2(tot.spend/tot.ld):null;
+          const cpm=tot.imp>0?r2(tot.spend/tot.imp*1000):null;
+          return '<td class="num" style="padding:8px 10px">'+fR(tot.spend)+'</td>'+
+            '<td class="num" style="padding:8px 10px;color:var(--muted2)">'+fN(tot.imp)+'</td>'+
+            '<td class="num" style="padding:8px 10px;color:var(--muted2)">'+fN(tot.lc)+'</td>'+
+            '<td class="num" style="padding:8px 10px;color:var(--muted2)">'+fN(tot.pv)+'</td>'+
+            '<td class="num" style="padding:8px 10px;font-weight:700">'+fN(tot.ld)+'</td>'+
+            '<td class="num" style="padding:8px 10px">'+fP(ctr)+'</td>'+
+            '<td class="num" style="padding:8px 10px">'+fP(cr)+'</td>'+
+            '<td class="num" style="padding:8px 10px">'+fP(txcv)+'</td>'+
+            '<td class="num '+cplCls(cpl)+'" style="padding:8px 10px">'+fR(cpl)+'</td>'+
+            '<td class="num '+cpmCls(cpm)+'" style="padding:8px 10px">'+fR(cpm)+'</td>';
+        })()}
+      </tr>
+    </tfoot>
+  </table>`;
 }
 
 function toggleCampRow(id,rowEl){
@@ -819,7 +781,6 @@ function toggleCampRow(id,rowEl){
     const campName=rowEl.querySelector('td:nth-child(2)').title;
     const mt=getMT();
     if(!mt?.adsets) return;
-    // Filtrar adsets desta campanha pelo campo camp
     const adsets=mt.adsets.filter(a=>a.camp===campName);
     const tbl=document.getElementById('sub_'+id);
     if(!tbl) return;
@@ -829,21 +790,19 @@ function toggleCampRow(id,rowEl){
       '<th class="num" style="font-size:9px;padding:4px 8px;color:var(--muted2)">Invest.</th>'+
       '<th class="num" style="font-size:9px;padding:4px 8px;color:var(--muted2)">Leads</th>'+
       '<th class="num" style="font-size:9px;padding:4px 8px;color:var(--muted2)">CTR</th>'+
-      '<th class="num" style="font-size:9px;padding:4px 8px;color:var(--muted2)">Tx.Lead</th>'+
+      '<th class="num" style="font-size:9px;padding:4px 8px;color:var(--muted2)">Tx.Conv</th>'+
       '<th class="num" style="font-size:9px;padding:4px 8px;color:var(--muted2)">CPL</th>'+
       '</tr></thead><tbody>'+
       adsets.map(a=>`<tr onclick="toggleAdsetRow('${id}','${a.n.replace(/'/g,"\'")}','${campName.replace(/'/g,"\'")}',this)" style="cursor:pointer">
         <td style="font-size:10px;padding:5px 8px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${a.n}">▶ ${a.n}</td>
         <td class="num" style="font-size:10px;padding:5px 8px">${fR(a.spend)}</td>
-        <td class="num" style="font-size:10px;padding:5px 8px">${fN(a.leads)}</td>
-        <td class="num" style="font-size:10px;padding:5px 8px">${}</td>
+        <td class="num" style="font-size:10px;padding:5px 8px">${fN(a.ld)}</td>
         <td class="num" style="font-size:10px;padding:5px 8px">${fP(a.ctr)}</td>
-        <td class="num" style="font-size:10px;padding:5px 8px">${fP(a.tx_lead)}</td>
+        <td class="num" style="font-size:10px;padding:5px 8px">${fP(a.tx_cv)}</td>
         <td class="num ${cplCls(a.cpl)}" style="font-size:10px;padding:5px 8px">${fR(a.cpl)}</td>
-        <td class="num ${roasCls(a.roas)}" style="font-size:10px;padding:5px 8px">${a.roas!=null?a.roas.toFixed(2)+'x':'—'}</td>
       </tr>
       <tr id="ads_${id}_${a.n.replace(/[^a-zA-Z0-9]/g,'_')}" style="display:none">
-        <td colspan="8" style="padding:0 0 0 20px;background:var(--bg)">
+        <td colspan="6" style="padding:0 0 0 20px;background:var(--bg)">
           <div id="ads_inner_${id}_${a.n.replace(/[^a-zA-Z0-9]/g,'_')}"></div>
         </td>
       </tr>`).join('')+'</tbody>';
@@ -872,8 +831,8 @@ function toggleAdsetRow(campId,adsetName,campName,rowEl){
           <div style="padding:6px 8px">
             <div style="font-size:9px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:4px" title="${ad.n}">${ad.n}</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px">
-              <div><div style="font-size:7px;color:var(--muted2);text-transform:uppercase">Vendas</div><div style="font-size:10px;font-weight:700;font-family:monospace">${fN(ad.pur)}</div></div>
-              <div><div style="font-size:7px;color:var(--muted2);text-transform:uppercase">CPA</div><div class="${cplCls(ad.cpl)}" style="font-size:10px;font-weight:700;font-family:monospace">${fR(ad.cpl)}</div></div>
+              <div><div style="font-size:7px;color:var(--muted2);text-transform:uppercase">Leads</div><div style="font-size:10px;font-weight:700;font-family:monospace">${fN(ad.ld)}</div></div>
+              <div><div style="font-size:7px;color:var(--muted2);text-transform:uppercase">CPL</div><div class="${cplCls(ad.cpl)}" style="font-size:10px;font-weight:700;font-family:monospace">${fR(ad.cpl)}</div></div>
               <div><div style="font-size:7px;color:var(--muted2);text-transform:uppercase">CTR</div><div style="font-size:10px;font-weight:700;font-family:monospace">${fP(ad.ctr)}</div></div>
               <div><div style="font-size:7px;color:var(--muted2);text-transform:uppercase">Invest.</div><div style="font-size:10px;font-weight:700;font-family:monospace">${fR(ad.spend)}</div></div>
             </div>
@@ -893,7 +852,7 @@ function renderAds(ads){
         <div style="font-size:9px;color:var(--muted2);margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${ad.camp||''}">${ad.camp?'📁 '+ad.camp.split('-').slice(-2).join('-'):''}</div>
         <div style="font-size:8px;color:var(--muted2);opacity:.75;margin-bottom:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${ad.adset||''}">${ad.adset?'↳ '+ad.adset:''}</div>
         <div class="ad-stats">
-          <div><div class="as-l">Leads</div><div class="as-v">${fN(ad.leads)}</div></div>
+          <div><div class="as-l">Leads</div><div class="as-v">${fN(ad.ld)}</div></div>
           <div><div class="as-l">CPL</div><div class="as-v ${cplCls(ad.cpl)}">${fR(ad.cpl)}</div></div>
           <div><div class="as-l">CTR</div><div class="as-v">${fP(ad.ctr)}</div></div>
           <div><div class="as-l">Invest.</div><div class="as-v">${fR(ad.spend)}</div></div>
@@ -908,9 +867,17 @@ function renderSeg(){
   function segTable(elId,data,lbl){
     const el=document.getElementById(elId);
     if(!data?.length){el.innerHTML='<div style="padding:8px;font-size:11px;color:var(--muted)">Sem dados</div>';return;}
-    el.innerHTML=`<table><thead><tr><th>${lbl}</th><th class="num">Invest.</th><th class="num">Leads</th><th class="num">CPL</th></tr></thead><tbody>${data.map(r=>`<tr><td style="font-size:11px">${r.n}</td><td class="num">${fR(r.spend)}</td><td class="num">${fN(r.leads)}</td><td class="num ${cplCls(r.cpl)}">${fR(r.cpl)}</td></tr>`).join('')}</tbody></table>`;
+    el.innerHTML=`<table>
+      <thead><tr><th>${lbl}</th><th class="num">Invest.</th><th class="num">Leads</th><th class="num">CPL</th></tr></thead>
+      <tbody>${data.map(r=>`<tr>
+        <td style="font-size:11px">${r.n}</td>
+        <td class="num">${fR(r.spend)}</td><td class="num">${fN(r.ld)}</td>
+        <td class="num ${cplCls(r.cpl)}">${fR(r.cpl)}</td>
+      </tr>`).join('')}</tbody></table>`;
   }
-  segTable('tGender',bd.gender,'Gênero');segTable('tAge',bd.age,'Faixa Etária');segTable('tPlatform',bd.platform,'Posicionamento');
+  segTable('tGender',  bd.gender,  'Gênero');
+  segTable('tAge',     bd.age,     'Faixa Etária');
+  segTable('tPlatform',bd.platform,'Posicionamento');
 }
 
 // ═══ MÉTRICAS DIÁRIAS ═══
@@ -979,10 +946,10 @@ function getDailyForCamp(){
       },0);
     });
   });
-  // Recalcular taxas
+  // Recalcular taxas com leads
   out.ctr=out.days.map((_,i)=>out.impressions[i]>0?+(out.link_clicks[i]/out.impressions[i]*100).toFixed(2):null);
   out.connect_rate=out.days.map((_,i)=>out.link_clicks[i]>0?+(out.page_view[i]/out.link_clicks[i]*100).toFixed(2):null);
-  out.tx_lead=out.days.map((_,i)=>out.page_view[i]>0?+(out.leads[i]/out.page_view[i]*100).toFixed(2):null);
+  out.tx_conv=out.days.map((_,i)=>out.page_view[i]>0?+(out.leads[i]/out.page_view[i]*100).toFixed(2):null);
   out.cpl=out.days.map((_,i)=>out.leads[i]>0?+(out.spend[i]/out.leads[i]).toFixed(2):null);
   out.cpm=out.days.map((_,i)=>out.impressions[i]>0?+(out.spend[i]/out.impressions[i]*1000).toFixed(2):null);
   return out;
@@ -996,39 +963,102 @@ function renderDiario(){
 function renderDiarioCharts(){
   const md=getDailyForCamp()||getMD();
   if(!md) return;
-  const COLOR=COR_ACENTO;
+
+  // Médias corretas: somar numerador/denominador, não média de taxas
+  const totImp = (md.impressions||[]).reduce((a,b)=>a+(b||0),0);
+  const totLc  = (md.link_clicks||[]).reduce((a,b)=>a+(b||0),0);
+  const totPv  = (md.page_view||[]).reduce((a,b)=>a+(b||0),0);
+  const totLd  = (md.leads||[]).reduce((a,b)=>a+(b||0),0);
+  const totSp  = (md.spend||[]).reduce((a,b)=>a+(b||0),0);
+  const avgCTR = totImp>0 ? r2(totLc/totImp*100)  : null;
+  const avgCR  = totLc>0  ? r2(totPv/totLc*100)   : null;
+  const avgTxCV= totPv>0  ? r2(totLd/totPv*100)   : null;
+  const avgCPL = totLd>0  ? r2(totSp/totLd)       : null;
+  const avgCPM = totImp>0 ? r2(totSp/totImp*1000) : null;
+
+  const METAS={
+    ctr:   {bom:CTR_BOM,    medio:CTR_MEDIO,    inv:false, avgVal:avgCTR},
+    cpm:   {bom:CPM_BOM,    medio:CPM_MEDIO,    inv:true,  avgVal:avgCPM},
+    cpl:   {bom:CPL_BOM,    medio:CPL_MEDIO,    inv:true,  avgVal:avgCPL},
+    cr:    {bom:CR_BOM,     medio:CR_MEDIO,     inv:false, avgVal:avgCR},
+    tx_cv: {bom:TX_CONV_BOM,medio:TX_CONV_MEDIO,inv:false, avgVal:avgTxCV},
+  };
+
+  function getMetricColor(id, val){
+    const m=METAS[id]; if(!m||val==null) return '#3b82f6';
+    return m.inv
+      ? (val<=m.bom?'#059669':val<=m.medio?'#d97706':'#dc2626')
+      : (val>=m.bom?'#059669':val>=m.medio?'#d97706':'#dc2626');
+  }
+
   const METRICS=[
-    {id:'ctr',     ttl:'CTR (%)',           suffix:'%',  data:()=>md.ctr},
-    {id:'cpm',     ttl:'CPM (R$)',          suffix:'',   fmt:v=>v?'R$'+v.toFixed(2):null,data:()=>md.cpm},
-    {id:'cr',      ttl:'Connect Rate (%)',   suffix:'%',  data:()=>md.connect_rate},
-    {id:'tx_lead', ttl:'Taxa Lead LP (%)',   suffix:'%',  data:()=>md.tx_lead},
-    {id:'cpl',     ttl:'CPL (R$)',          suffix:'',   fmt:v=>v?'R$'+v.toFixed(2):null,data:()=>md.cpl},
-    {id:'leads',   ttl:'Leads por Dia',      suffix:'',   fmt:v=>v!=null?fN(v):null,data:()=>md.leads},
+    {id:'ctr',  ttl:'CTR (%)',          suffix:'%', data:()=>md.ctr},
+    {id:'cpm',  ttl:'CPM (R$)',         suffix:'',  fmt:v=>v!=null?'R$'+v.toFixed(2):null, data:()=>md.cpm},
+    {id:'cpl',  ttl:'Custo por Lead (R$)', suffix:'', fmt:v=>v!=null?'R$'+v.toFixed(2):null, data:()=>md.cpl},
+    {id:'cr',   ttl:'Connect Rate (%)', suffix:'%', data:()=>md.connect_rate},
+    {id:'tx_cv',ttl:'Taxa Conversão (%)',suffix:'%', data:()=>md.tx_conv},
   ];
+
   const el=document.getElementById('dailyCharts');
-  el.innerHTML=METRICS.map(m=>`<div class="daily-row"><div class="daily-side"><div class="ds-lbl">Média</div><div class="ds-val" id="avg_${m.id}" style="color:${COLOR}">—</div></div><div class="daily-main"><div class="daily-ttl">${m.ttl}</div><div class="cw" style="height:140px"><canvas id="ch_${m.id}"></canvas></div></div></div>`).join('');
+  el.innerHTML=METRICS.map(m=>{
+    const avgVal=METAS[m.id].avgVal;
+    const col=getMetricColor(m.id,avgVal);
+    return `<div class="daily-row">
+      <div class="daily-side">
+        <div class="ds-lbl">Período</div>
+        <div class="ds-val" id="avg_${m.id}" style="color:${col}">—</div>
+      </div>
+      <div class="daily-main">
+        <div class="daily-ttl">${m.ttl}</div>
+        <div class="cw" style="height:140px"><canvas id="ch_${m.id}"></canvas></div>
+      </div>
+    </div>`;
+  }).join('');
+
   METRICS.forEach(m=>{
-    const data=m.data(),avgVal=avg(data),avgLine=data?.map(()=>avgVal);
-    document.getElementById(`avg_${m.id}`).textContent=m.fmt?m.fmt(avgVal):avgVal!=null?avgVal.toFixed(2)+m.suffix:'—';
-    const id=`ch_${m.id}`;if(CH[id]){CH[id].destroy();delete CH[id];}
-    CH[id]=new Chart(document.getElementById(id),{type:'line',data:{labels:md.days,datasets:[
-      {label:m.ttl,data,borderColor:COLOR,backgroundColor:COLOR+'18',fill:true,tension:.3,pointRadius:2,borderWidth:2,spanGaps:true,
-       datalabels:{display:ctx=>showLabels,color:COLOR,font:{size:8,weight:'bold'},formatter:(v,ctx)=>{if(v==null)return null;const tot=ctx.dataset.data.filter(x=>x!=null).length;if(tot>18&&ctx.dataIndex%3!==0)return null;return m.fmt?m.fmt(v):v.toFixed(1)+m.suffix;},anchor:'top',align:'top',offset:2,clip:false}},
-      {label:'Média',data:avgLine,borderColor:'#111',borderDash:[4,4],backgroundColor:'transparent',pointRadius:0,borderWidth:1.5,spanGaps:true,datalabels:{display:false}},
-    ]},options:{...bo(),scales:{x:{ticks:{color:TXT(),font:bf,maxTicksLimit:14},grid:{color:GRID()}},y:{ticks:{color:TXT(),font:bf,callback:v=>m.fmt?'R$'+v.toFixed(0):v+m.suffix},grid:{color:GRID()},min:0}}}});
+    const data=m.data();
+    const avgVal=METAS[m.id].avgVal;
+    const avgLine=data?.map(()=>avgVal);
+    const COLOR=getMetricColor(m.id,avgVal);
+    const fmtAvg=m.fmt?m.fmt(avgVal):(avgVal!=null?avgVal.toFixed(2)+m.suffix:'—');
+    const avgEl=document.getElementById(`avg_${m.id}`);
+    if(avgEl){ avgEl.textContent=fmtAvg; avgEl.style.color=COLOR; }
+    const id=`ch_${m.id}`;
+    if(CH[id]){CH[id].destroy();delete CH[id];}
+    CH[id]=new Chart(document.getElementById(id),{type:'line',
+      data:{labels:md.days,datasets:[
+        {label:m.ttl,data,borderColor:COLOR,backgroundColor:COLOR+'18',fill:true,
+         tension:.3,pointRadius:2,borderWidth:2,spanGaps:true,
+         datalabels:{display:ctx=>showLabels,color:COLOR,font:{size:8,weight:'bold'},
+           formatter:(v,ctx)=>{
+             if(v==null) return null;
+             const tot=ctx.dataset.data.filter(x=>x!=null).length;
+             if(tot>18&&ctx.dataIndex%3!==0) return null;
+             return m.fmt?m.fmt(v):v.toFixed(1)+m.suffix;
+           },anchor:'top',align:'top',offset:2,clip:false}},
+        {label:'Média período',data:avgLine,borderColor:'#111',borderDash:[4,4],backgroundColor:'transparent',
+         pointRadius:0,borderWidth:1.5,spanGaps:true,datalabels:{display:false}},
+      ]},
+      options:{...bo(),scales:{
+        x:{ticks:{color:TXT(),font:bf,maxTicksLimit:14},grid:{color:GRID()}},
+        y:{ticks:{color:TXT(),font:bf,callback:v=>m.fmt?('R$'+v.toFixed(0)):v+m.suffix},grid:{color:GRID()},min:0}
+      }}
+    });
   });
 }
 
 // ═══ PESQUISA ═══
-const PIZZA_COLS=['#0ea5e9','#38bdf8','#0284c7','#7dd3fc','#0369a1','#bae6fd','#075985','#e0f2fe'];
+const PIZZA_COLS=['#3b82f6','#60a5fa','#1d4ed8','#93c5fd','#1e40af','#bfdbfe','#172554','#eff6ff'];
 
 function renderPesquisa(){
   if(!PESQUISA) return;
-  const resp=PESQUISA.total,leads=PESQUISA.total_leads||0,taxa=leads>0?r2(resp/leads*100):null;
+  const totalLeads=PESQUISA.total_leads||0; const resp=PESQUISA.total;
+  const taxa=totalLeads>0?r2(resp/totalLeads*100):null;
   document.getElementById('pesKpis').innerHTML=`
-    <div class="kpi" style="--kc:${COR_ACENTO}"><div class="kpi-lbl">Respostas</div><div class="kpi-val">${fN(resp)}</div><div class="kpi-sub">na pesquisa</div></div>
-    <div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Total de Leads</div><div class="kpi-val">${fN(leads)}</div><div class="kpi-sub">captados</div></div>
+    <div class="kpi" style="--kc:#3b82f6"><div class="kpi-lbl">Respostas</div><div class="kpi-val">${fN(resp)}</div><div class="kpi-sub">na pesquisa</div></div>
+    <div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Total de Leads</div><div class="kpi-val">${fN(totalLeads)}</div><div class="kpi-sub">captados no lançamento</div></div>
     <div class="kpi" style="--kc:#059669"><div class="kpi-lbl">Taxa Resp./Leads</div><div class="kpi-val">${taxa!=null?taxa+'%':'—'}</div><div class="kpi-sub">respostas / leads</div></div>`;
+
   buildUtmFilters();
   buildPizzas();
 }
@@ -1150,7 +1180,6 @@ function toggleLabels(el){
 
 function rerenderActive(){
   const p=document.querySelector('.page-section.active')?.id?.replace('page-','');
-  if(p==='overview') renderOverview();
   if(p==='meta')     renderMeta();
   if(p==='diario')   renderDiario();
   if(p==='pesquisa') renderPesquisa();
@@ -1163,9 +1192,8 @@ function goPage(p,btn){
   document.querySelectorAll('.sb-item').forEach(e=>e.classList.remove('active'));
   document.getElementById('page-'+p).classList.add('active');
   if(btn) btn.classList.add('active');
-  const titles={overview:'Overview',meta:'Meta Ads',diario:'Métricas Diárias',pesquisa:'Pesquisa'};
+  const titles={meta:'Meta Ads',diario:'Métricas Diárias',pesquisa:'Pesquisa'};
   document.getElementById('pageTitle').textContent=titles[p]||p;
-  if(p==='overview') renderOverview();
   if(p==='meta')     renderMeta();
   if(p==='diario')   renderDiario();
   if(p==='pesquisa') renderPesquisa();
@@ -1208,15 +1236,17 @@ window.addEventListener('resize', ajustarPaddingContent);
   const lb=document.getElementById('logoBox');
   if(lb){lb.textContent=LOGO_LETRA;lb.style.background=`linear-gradient(135deg,${COR_ACENTO},${COR_ACENTO}cc)`;}
   document.getElementById('sbNome').textContent=NOME_CLIENTE;
-  document.getElementById('pageTab').textContent=`${NOME_CLIENTE} — Gratuito`;
+  document.getElementById('pageTab').textContent=`${NOME_CLIENTE} — Dashboard`;
   document.getElementById('sbLct').textContent=LANCAMENTO_COD||'Todos';
   document.documentElement.style.setProperty('--accent',COR_ACENTO);
   const badge=document.getElementById('liveBadge');
   badge.style.cssText=`background:${COR_ACENTO}15;border:1px solid ${COR_ACENTO}44;color:${COR_ACENTO};`;
   document.getElementById('livePulse').style.background=COR_ACENTO;
   if(META_DAILY?.lct?.days?.length){
-    const d=META_DAILY.lct.days;document.getElementById('liveTxt').textContent='Dados até '+d[d.length-1];
-    const sfEl=document.getElementById('sbAtual');if(sfEl&&sfEl.textContent.includes('--'))sfEl.textContent='Atualizado '+d[d.length-1];
+    const d=META_DAILY.lct.days; document.getElementById('liveTxt').textContent='Dados até '+d[d.length-1];
+    // Atualizar footer com data do gerador (vem como texto no span)
+    const sfEl=document.getElementById('sbAtual');
+    if(sfEl&&sfEl.textContent.includes('--')) sfEl.textContent='Atualizado '+d[d.length-1];
   }
   if(LANCAMENTO_COD){const lb2=document.getElementById('lctBar');if(lb2)lb2.style.display='flex';document.getElementById('btnLctOn').textContent=LANCAMENTO_COD;}
   // Pesquisa: esconder menu e aba se PESQUISA=false
@@ -1226,7 +1256,7 @@ window.addEventListener('resize', ajustarPaddingContent);
     const pgP=document.getElementById('page-pesquisa');
     if(pgP) pgP.style.display='none';
   }
-  renderOverview();
+  renderMeta();
   ajustarPaddingContent();
 })();
 </script>
