@@ -8,7 +8,6 @@ from pathlib import Path
 # ══════════════════════════════════════════════════════
 # CONFIG
 # ══════════════════════════════════════════════════════
-
 SHEET_ID         = "1s0UHuiOL17BdkrYEMC7bmcdQW5snl0agA6v8qoIVHAs"
 TEMPLATE_FILE    = "dashboard_lancamento_gratuito.html"
 OUTPUT_FILE      = "index.html"
@@ -32,8 +31,6 @@ TX_CONV_BOM      = 30.0   # Taxa Conv (Lead/PV) ≥ 30% → verde
 TX_CONV_MEDIO    = 20.0
 CPM_BOM          = 25.0    # CPM ≤ 5 → verde (menor = melhor)
 CPM_MEDIO        = 35.0
-CPL_BOM          = 3.0    # Custo por Lead ≤ 5 → verde
-CPL_MEDIO        = 5.0
 
 # ══════════════════════════════════════════════════════
 def sheet_url(t): return f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={t}"
