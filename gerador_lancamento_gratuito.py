@@ -18,7 +18,7 @@ LOGO_LETRA       = "DM"
 COR_ACENTO       = "#0ea5e9"
 
 LANCAMENTO_COD   = "RDC02"        # filtra campanhas; "" = ver tudo
-USAR_PESQUISA    = False            # False = oculta aba Pesquisa
+USAR_PESQUISA    = True            # False = oculta aba Pesquisa
 
 # Metas do funil — define cores (verde/amarelo/vermelho)
 CPL_BOM          = 5.0    # Custo por Lead ≤ 5 → verde | 5-10 → amarelo | acima → vermelho
