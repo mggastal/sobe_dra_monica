@@ -1,12 +1,12 @@
 {
-  "cliente": "Dra Mônica",
+  "cliente": "Dra Monica",
   "cor": "#0ea5e9",
   "letra": "DM",
   "lancamento": "RDC02",
-  "atualizado": "22/04/2026",
+  "atualizado": "23/04/2026",
   "kpis": {
-    "spend": 708.13,
-    "leads": 0,
-    "cpl": null
+    "spend": 790.54,
+    "leads": 414,
+    "cpl": 1.91
   }
 }
