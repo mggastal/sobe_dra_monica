@@ -835,22 +835,39 @@ function toggleAdsetRow(campId,adsetName,campName,rowEl){
     const inner=document.getElementById('ads_inner_'+campId+'_'+key);
     if(!inner) return;
     if(!ads.length){inner.innerHTML='<div style="padding:8px;font-size:10px;color:var(--muted)">Sem criativos</div>';return;}
-    inner.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;padding:10px 10px 10px 0">'+
-      ads.map(ad=>{
-        const img=ad.thumb?`<img src="${ad.thumb}" style="width:100%;height:100%;object-fit:contain;background:var(--surface2)" loading="lazy" onerror="this.parentElement.innerHTML='🖼️'">`:'<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:24px;color:var(--muted2)">🖼️</div>';
-        return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden">
-          <div style="width:100%;aspect-ratio:4/5;background:var(--surface2);overflow:hidden">${img}</div>
-          <div style="padding:6px 8px">
-            <div style="font-size:9px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:4px" title="${ad.n}">${ad.n}</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px">
-              <div><div style="font-size:7px;color:var(--muted2);text-transform:uppercase">Leads</div><div style="font-size:10px;font-weight:700;font-family:monospace">${fN(ad.ld)}</div></div>
-              <div><div style="font-size:7px;color:var(--muted2);text-transform:uppercase">CPL</div><div class="${cplCls(ad.cpl)}" style="font-size:10px;font-weight:700;font-family:monospace">${fR(ad.cpl)}</div></div>
-              <div><div style="font-size:7px;color:var(--muted2);text-transform:uppercase">CTR</div><div style="font-size:10px;font-weight:700;font-family:monospace">${fP(ad.ctr)}</div></div>
-              <div><div style="font-size:7px;color:var(--muted2);text-transform:uppercase">Invest.</div><div style="font-size:10px;font-weight:700;font-family:monospace">${fR(ad.spend)}</div></div>
+    const isMob=window.innerWidth<=768;
+    if(isMob){
+      // Mobile: lista simples sem imagem
+      inner.innerHTML='<div style="display:flex;flex-direction:column;gap:1px;padding:4px 0">'+
+        ads.map(ad=>`
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-bottom:1px solid var(--border);gap:8px">
+            <div style="font-size:10px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1" title="${ad.n}">${ad.n}</div>
+            <div style="display:flex;gap:10px;flex-shrink:0;font-size:10px;font-family:monospace">
+              <span style="color:var(--muted2)">${fN(ad.ld)} leads</span>
+              <span class="${cplCls(ad.cpl)}">${fR(ad.cpl)}</span>
+              <span style="color:var(--muted2)">${fP(ad.ctr)}</span>
             </div>
-          </div>
-        </div>`;
-      }).join('')+'</div>';
+          </div>`).join('')+
+        '</div>';
+    } else {
+      // Desktop: grid com imagem
+      inner.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;padding:10px 10px 10px 0">'+
+        ads.map(ad=>{
+          const img=ad.thumb?`<img src="${ad.thumb}" style="width:100%;height:100%;object-fit:contain;background:var(--surface2)" loading="lazy" onerror="this.parentElement.innerHTML='🖼️'">`:'<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:24px;color:var(--muted2)">🖼️</div>';
+          return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden">
+            <div style="width:100%;aspect-ratio:4/5;background:var(--surface2);overflow:hidden">${img}</div>
+            <div style="padding:6px 8px">
+              <div style="font-size:9px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:4px" title="${ad.n}">${ad.n}</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px">
+                <div><div style="font-size:7px;color:var(--muted2);text-transform:uppercase">Leads</div><div style="font-size:10px;font-weight:700;font-family:monospace">${fN(ad.ld)}</div></div>
+                <div><div style="font-size:7px;color:var(--muted2);text-transform:uppercase">CPL</div><div class="${cplCls(ad.cpl)}" style="font-size:10px;font-weight:700;font-family:monospace">${fR(ad.cpl)}</div></div>
+                <div><div style="font-size:7px;color:var(--muted2);text-transform:uppercase">CTR</div><div style="font-size:10px;font-weight:700;font-family:monospace">${fP(ad.ctr)}</div></div>
+                <div><div style="font-size:7px;color:var(--muted2);text-transform:uppercase">Invest.</div><div style="font-size:10px;font-weight:700;font-family:monospace">${fR(ad.spend)}</div></div>
+              </div>
+            </div>
+          </div>`;
+        }).join('')+'</div>';
+    }
   }
 }
 
