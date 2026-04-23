@@ -76,7 +76,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 .funnel-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:16px;}
 .funnel-steps{display:flex;flex-direction:column;gap:0;}
 .f-step{display:flex;flex-direction:column;}
-.f-bar{height:40px;border-radius:7px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;transition:width .4s;min-width:80px;}
+.f-bar{height:40px;border-radius:7px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;transition:width .4s;min-width:110px;}
 .f-bar-lbl{font-size:12px;font-weight:600;color:#fff;}
 .f-bar.narrow .f-bar-lbl,.f-bar.narrow .f-bar-val{color:#fff;}
 .f-bar-val{font-family:'DM Mono',monospace;font-size:14px;font-weight:700;color:#fff;}
@@ -172,7 +172,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 .overlay.open{display:block;}
 @media(max-width:768px){.topbar{left:0;right:0;z-index:299!important;}
   .ov-bottom{grid-template-columns:1fr!important;}
-  .content{padding-top:160px!important;}
+  .content{padding-top:185px!important;}
   .pz-cw canvas{max-width:100%!important;}
   .pz-card{width:100%;box-sizing:border-box;}
 
@@ -539,7 +539,7 @@ function renderMeta(){
        datalabels:{...makeDatalabels('#3b82f6','',v=>v!=null?fN(v):null),display:ctx=>showLabels}},
       {label:'Invest.',data:md.spend,borderColor:'#059669',backgroundColor:'transparent',tension:.3,pointRadius:2,borderWidth:2,type:'line',spanGaps:true,datalabels:{display:false}},
       {label:'CPL',data:md.cpl,borderColor:'#111',borderDash:[5,3],backgroundColor:'transparent',tension:.3,pointRadius:2,borderWidth:1.5,type:'line',yAxisID:'y2',spanGaps:true,
-       datalabels:{display:ctx=>showLabels,color:'#333',font:{size:8,weight:'bold'},formatter:v=>v!=null?'R$'+v.toFixed(0):null,anchor:'end',align:'top',offset:2,clip:false}},
+       datalabels:{display:ctx=>showLabels,color:'#333',font:{size:8,weight:'bold'},formatter:v=>v!=null?'R$'+v.toFixed(2):null,anchor:'end',align:'top',offset:2,clip:false}},
     ]},
     options:{...bo(),scales:{
       x:{ticks:{color:TXT(),font:bf,maxTicksLimit:14},grid:{color:GRID()}},
@@ -837,7 +837,7 @@ function toggleAdsetRow(campId,adsetName,campName,rowEl){
     if(!ads.length){inner.innerHTML='<div style="padding:8px;font-size:10px;color:var(--muted)">Sem criativos</div>';return;}
     inner.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;padding:10px 10px 10px 0">'+
       ads.map(ad=>{
-        const img=ad.thumb?`<img src="${ad.thumb}" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.parentElement.innerHTML='🖼️'">`:'<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:24px;color:var(--muted2)">🖼️</div>';
+        const img=ad.thumb?`<img src="${ad.thumb}" style="width:100%;height:100%;object-fit:contain;background:var(--surface2)" loading="lazy" onerror="this.parentElement.innerHTML='🖼️'">`:'<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:24px;color:var(--muted2)">🖼️</div>';
         return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden">
           <div style="width:100%;aspect-ratio:4/5;background:var(--surface2);overflow:hidden">${img}</div>
           <div style="padding:6px 8px">
