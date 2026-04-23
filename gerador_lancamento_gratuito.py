@@ -23,14 +23,16 @@ CPA_BOM          = 3.0    # CPL ≤ 5 → verde  (custo por lead)
 CPA_MEDIO        = 5.0   # CPL ≤ 10 → amarelo | acima → vermelho
 
 # Metas do funil — define cores (verde/amarelo/vermelho)
-CTR_BOM          = 2.0    # CTR ≥ 1.2% → verde
-CTR_MEDIO        = 1.5
-CR_BOM           = 70.0   # Connect Rate (PV/Cliques) ≥ 40% → verde
-CR_MEDIO         = 60.0
-TX_CONV_BOM      = 30.0   # Taxa Conv (Lead/PV) ≥ 30% → verde
-TX_CONV_MEDIO    = 20.0
-CPM_BOM          = 25.0    # CPM ≤ 5 → verde (menor = melhor)
-CPM_MEDIO        = 35.0
+CPL_BOM          = 5.0    # Custo por Lead ≤ 5 → verde | 5-10 → amarelo | acima → vermelho
+CPL_MEDIO        = 10.0
+CTR_BOM          = 1.2    # CTR ≥ 1.2% → verde | 0.8-1.2% → amarelo | abaixo → vermelho
+CTR_MEDIO        = 0.8
+CR_BOM           = 40.0   # Connect Rate ≥ 40% → verde | 25-40% → amarelo | abaixo → vermelho
+CR_MEDIO         = 25.0
+TX_CONV_BOM      = 30.0   # Taxa Conversão (Lead/PV) ≥ 30% → verde | 15-30% → amarelo | abaixo → vermelho
+TX_CONV_MEDIO    = 15.0
+CPM_BOM          = 5.0    # CPM ≤ 5 → verde | 5-12 → amarelo | acima → vermelho (menor = melhor)
+CPM_MEDIO        = 12.0
 
 # ══════════════════════════════════════════════════════
 def sheet_url(t): return f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={t}"
@@ -303,9 +305,12 @@ def inject_all(tpl, meta_k, meta_d, meta_dc, meta_raw_c, meta_t, meta_bd, pes):
     html=replace_js_const(html,"PESQUISA", pes if USAR_PESQUISA else False)
     from datetime import timezone, timedelta
     html=replace_js_const(html,"DATA_GERACAO", date.today().strftime("%Y-%m-%d"))
+    # Suporte a CPL_BOM ou CPA_BOM (retrocompatibilidade)
+    _cpl_bom   = globals().get("CPL_BOM",   globals().get("CPA_BOM",   5.0))
+    _cpl_medio = globals().get("CPL_MEDIO", globals().get("CPA_MEDIO", 10.0))
     for k,v in [("LANCAMENTO_COD",f"'{LANCAMENTO_COD}'"),("NOME_CLIENTE",f"'{NOME_CLIENTE}'"),
                 ("LOGO_LETRA",f"'{LOGO_LETRA}'"),("COR_ACENTO",f"'{COR_ACENTO}'"),
-                ("CPL_BOM",str(CPL_BOM)),("CPL_MEDIO",str(CPL_MEDIO)),
+                ("CPL_BOM",str(_cpl_bom)),("CPL_MEDIO",str(_cpl_medio)),
                 ("CTR_BOM",str(CTR_BOM)),("CTR_MEDIO",str(CTR_MEDIO)),
                 ("CR_BOM",str(CR_BOM)),("CR_MEDIO",str(CR_MEDIO)),
                 ("TX_CONV_BOM",str(TX_CONV_BOM)),("TX_CONV_MEDIO",str(TX_CONV_MEDIO)),
