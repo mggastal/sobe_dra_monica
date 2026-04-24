@@ -658,22 +658,35 @@ function calcTableFromRaw(){
 let _calcRawRunning=false;
 function getMT(){
   const key=getPeriodKey();
+  let base_mt;
   if(key){
     const base=filtroLct?META_TABLES?.lct:META_TABLES?.all;
     if(!base) return null;
-    return base[key]||base['all']||null;
+    base_mt=base[key]||base['all']||null;
+  } else {
+    // Datas livres: calcular do raw (sem recursão)
+    if(_calcRawRunning) return ((filtroLct?META_TABLES?.lct:META_TABLES?.all)||{})['all']||null;
+    _calcRawRunning=true;
+    const result=calcTableFromRaw();
+    _calcRawRunning=false;
+    base_mt=result||((filtroLct?META_TABLES?.lct:META_TABLES?.all)||{})['all']||null;
   }
-  // Datas livres: calcular do raw (sem recursão)
-  if(_calcRawRunning) return ((filtroLct?META_TABLES?.lct:META_TABLES?.all)||{})['all']||null;
-  _calcRawRunning=true;
-  const result=calcTableFromRaw();
-  _calcRawRunning=false;
-  return result||((filtroLct?META_TABLES?.lct:META_TABLES?.all)||{})['all']||null;
+  // Filtrar por campanhas selecionadas no filtro da aba Meta
+  if(metaCampSel?.size>0 && base_mt){
+    return {
+      camps:  (base_mt.camps||[]).filter(c=>metaCampSel.has(c.n)),
+      adsets: (base_mt.adsets||[]).filter(a=>metaCampSel.has(a.camp)),
+      ads:    (base_mt.ads||[]).filter(a=>metaCampSel.has(a.camp)),
+    };
+  }
+  return base_mt;
 }
 function filterBdRaw(rawArr, keyFn){
   const hoje=getHoje();
   const filtered=(rawArr||[]).filter(r=>{
     if(filtroLct && !r.lct) return false;
+    // Filtro de campanha da aba Meta (se houver campo camp no raw)
+    if(metaCampSel?.size>0 && r.camp && !metaCampSel.has(r.camp)) return false;
     const dt=parseDayStr(r.d);
     if(periodDays>0){
       const fimBD=new Date(hoje);if(periodDays===1)fimBD.setDate(fimBD.getDate()-1);fimBD.setHours(23,59,59);
