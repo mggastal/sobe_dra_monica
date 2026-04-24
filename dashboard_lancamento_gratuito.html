@@ -169,7 +169,8 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 /* MOB */
 .mob-menu{display:none;width:34px;height:34px;border-radius:7px;background:var(--surface2);border:1px solid var(--border);cursor:pointer;font-size:17px;align-items:center;justify-content:center;}
 .desk-only{display:block!important;}
-@media(max-width:768px){.desk-only{display:none!important;}}
+details.desk-only{display:block!important;}
+@media(max-width:768px){.desk-only{display:none!important;}details.desk-only{display:none!important;}}
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:250;}
 .overlay.open{display:block;}
 @media(max-width:768px){.topbar{left:0;right:0;z-index:299!important;}
@@ -249,7 +250,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
     <!-- META ADS (aba principal) -->
     <div class="page-section active" id="page-meta">
       <!-- Filtro de campanha — só desktop -->
-      <details style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:0;margin-bottom:14px;box-shadow:var(--sh);display:none;" id="metaCampFilterDetails" class="desk-only">
+      <details style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:0;margin-bottom:14px;box-shadow:var(--sh);" id="metaCampFilterDetails" class="desk-only">
         <summary style="padding:10px 14px;cursor:pointer;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;list-style:none;display:flex;align-items:center;justify-content:space-between;user-select:none;">
           Filtrar por campanha <span id="metaCampFilterCount" style="font-weight:400;font-size:10px"></span>
           <span style="font-size:13px;color:var(--muted2)">▾</span>
@@ -950,6 +951,10 @@ function buildMetaCampFilter(){
     const mt=getMT(); camps=mt?.camps?.map(c=>c.n)||[];
   }
   if(!camps.length) return;
+  // Só reconstrói se as campanhas mudaram (evita reset ao marcar/desmarcar)
+  const newKey=camps.sort().join('|');
+  if(el.dataset.campsKey===newKey) return;
+  el.dataset.campsKey=newKey;
   el.innerHTML='<div style="display:flex;flex-direction:column;gap:3px;">'
     +'<label style="display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;background:var(--surface2);border:1px solid var(--border)">'
     +'<input type="checkbox" id="meta_cb_todas" onchange="toggleMetaTodas(this)" checked style="accent-color:var(--accent)"> Todas</label>'
@@ -1256,7 +1261,12 @@ function setPeriod(days,btn){
   periodDays=days; dateI=null; dateF=null;
   document.getElementById('dtI').value=''; document.getElementById('dtF').value='';
   document.querySelectorAll('.period-bar .pb').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active'); rerenderActive();
+  btn.classList.add('active');
+  // Resetar cache do filtro de campanhas para reconstruir com novas campanhas do período
+  const mf=document.getElementById('metaCampFilter');
+  if(mf) delete mf.dataset.campsKey;
+  metaCampSel=new Set();
+  rerenderActive();
 }
 
 document.getElementById('dtI').addEventListener('change',e=>{
