@@ -711,22 +711,32 @@ function filterBdRaw(rawArr, keyFn){
 
 function getMBD(){
   if(!META_BD) return null;
-  const key=getPeriodKey();
-  // Dados pré-calculados: respeitar filtroLct (lct vs all)
-  if(key){
-    const base=filtroLct?META_BD?.lct:META_BD?.all;
-    if(base) return base[key]||base['all']||null;
-    // Fallback: estrutura antiga sem lct/all
-    return META_BD[key]||META_BD['all']||null;
-  }
-  // Datas livres: calcular do raw com filtro lct incluso no filterBdRaw
   const rawGa=META_BD._raw_ga;
   const rawPt=META_BD._raw_pt;
+  const AGE_ORDER=["18-24","25-34","35-44","45-54","55-64","65+"];
+
+  // Se há filtro de campanha ativo, sempre usar raw (único modo que filtra por camp)
+  if(metaCampSel?.size>0){
+    if(!rawGa&&!rawPt) return null;
+    const age=filterBdRaw(rawGa,r=>r.age).filter(v=>AGE_ORDER.includes(v.n))
+      .sort((a,b)=>AGE_ORDER.indexOf(a.n)-AGE_ORDER.indexOf(b.n));
+    const gender=filterBdRaw(rawGa,r=>r.gen).filter(v=>['female','male'].includes(v.n));
+    const platform=filterBdRaw(rawPt,r=>r.plat).slice(0,8);
+    return {age,gender,platform};
+  }
+
+  const key=getPeriodKey();
+  if(key){
+    // Períodos fixos: usar pré-calculado (mais rápido)
+    const base=filtroLct?META_BD?.lct:META_BD?.all;
+    if(base) return base[key]||base['all']||null;
+    return META_BD[key]||META_BD['all']||null;
+  }
+  // Datas livres: calcular do raw
   if(!rawGa&&!rawPt){
     const base=filtroLct?META_BD?.lct:META_BD?.all;
     return base?.['all']||META_BD['all']||null;
   }
-  const AGE_ORDER=["18-24","25-34","35-44","45-54","55-64","65+"];
   const age=filterBdRaw(rawGa,r=>r.age).filter(v=>AGE_ORDER.includes(v.n))
     .sort((a,b)=>AGE_ORDER.indexOf(a.n)-AGE_ORDER.indexOf(b.n));
   const gender=filterBdRaw(rawGa,r=>r.gen).filter(v=>['female','male'].includes(v.n));
