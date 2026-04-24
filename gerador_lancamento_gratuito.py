@@ -262,12 +262,12 @@ def meta_breakdowns(df):
     if len(df_ga)>0:
         for _,r in df_ga.iterrows():
             if pd.isna(r['date']): continue
-            raw_ga.append({'d':r['date'].strftime('%d/%m'),'age':str(r['age']),'gen':str(r['gender']),'sp':round(float(r['spend']),2),'ld':int(r['leads']),'lct':bool(r['is_lct'])})
+            raw_ga.append({'d':r['date'].strftime('%d/%m'),'age':str(r['age']),'gen':str(r['gender']),'sp':round(float(r['spend']),2),'ld':int(r['leads']),'lct':bool(r['is_lct']),'camp':str(r['Campaign Name']) if 'Campaign Name' in r.index else ''})
     raw_pt=[]
     if len(df_pt)>0:
         for _,r in df_pt.iterrows():
             if pd.isna(r['date']): continue
-            raw_pt.append({'d':r['date'].strftime('%d/%m'),'plat':str(r['platform']),'sp':round(float(r['spend']),2),'ld':int(r['leads']),'lct':bool(r['is_lct'])})
+            raw_pt.append({'d':r['date'].strftime('%d/%m'),'plat':str(r['platform']),'sp':round(float(r['spend']),2),'ld':int(r['leads']),'lct':bool(r['is_lct']),'camp':str(r['Campaign Name']) if 'Campaign Name' in r.index else ''})
     result['_raw_ga']=raw_ga; result['_raw_pt']=raw_pt
     return result
 
