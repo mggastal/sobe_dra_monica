@@ -556,9 +556,9 @@ function renderMeta(){
     ]},
     options:{...bo(),scales:{
       x:{ticks:{color:TXT(),font:bf,maxTicksLimit:14},grid:{color:GRID()}},
-      y:{ticks:{color:TXT(),font:bf,callback:v=>'R$'+v.toLocaleString()},grid:{color:GRID()}},
+      y:{ticks:{color:TXT(),font:bf,callback:v=>'R$'+v.toLocaleString()},grid:{color:GRID()},min:0},
       y1:{position:'right',ticks:{color:'#3b82f6',font:bf},grid:{display:false},grace:'20%'},
-      y2:{position:'right',ticks:{color:'#555',font:bf,callback:v=>'R$'+v.toFixed(0)},grid:{display:false},offset:true},
+      y2:{position:'right',ticks:{color:'#555',font:bf,callback:v=>'R$'+v.toFixed(0)},grid:{display:false},offset:true,min:0},
     }}
   });
 
@@ -715,9 +715,8 @@ function getMBD(){
   const rawPt=META_BD._raw_pt;
   const AGE_ORDER=["18-24","25-34","35-44","45-54","55-64","65+"];
 
-  // Se há filtro de campanha ativo, sempre usar raw (único modo que filtra por camp)
-  if(metaCampSel?.size>0){
-    if(!rawGa&&!rawPt) return null;
+  // Sempre usar raw — garante período correto e suporta filtro de campanha
+  if(rawGa||rawPt){
     const age=filterBdRaw(rawGa,r=>r.age).filter(v=>AGE_ORDER.includes(v.n))
       .sort((a,b)=>AGE_ORDER.indexOf(a.n)-AGE_ORDER.indexOf(b.n));
     const gender=filterBdRaw(rawGa,r=>r.gen).filter(v=>['female','male'].includes(v.n));
@@ -725,23 +724,15 @@ function getMBD(){
     return {age,gender,platform};
   }
 
+  // Fallback: dados pré-calculados (se raw não disponível)
   const key=getPeriodKey();
   if(key){
-    // Períodos fixos: usar pré-calculado (mais rápido)
     const base=filtroLct?META_BD?.lct:META_BD?.all;
     if(base) return base[key]||base['all']||null;
     return META_BD[key]||META_BD['all']||null;
   }
-  // Datas livres: calcular do raw
-  if(!rawGa&&!rawPt){
-    const base=filtroLct?META_BD?.lct:META_BD?.all;
-    return base?.['all']||META_BD['all']||null;
-  }
-  const age=filterBdRaw(rawGa,r=>r.age).filter(v=>AGE_ORDER.includes(v.n))
-    .sort((a,b)=>AGE_ORDER.indexOf(a.n)-AGE_ORDER.indexOf(b.n));
-  const gender=filterBdRaw(rawGa,r=>r.gen).filter(v=>['female','male'].includes(v.n));
-  const platform=filterBdRaw(rawPt,r=>r.plat).slice(0,8);
-  return {age,gender,platform};
+  const base=filtroLct?META_BD?.lct:META_BD?.all;
+  return base?.['all']||META_BD['all']||null;
 }
 
 function buildTable(elId,data,mainCol){
