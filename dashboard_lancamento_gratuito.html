@@ -223,6 +223,12 @@ details.desk-only{display:block!important;}
       <button class="mob-menu" onclick="toggleSb()">☰</button>
       <div class="page-title" id="pageTitle">Overview</div>
       <div class="live-badge" id="liveBadge"><div class="pulse" id="livePulse"></div><span id="liveTxt">—</span></div>
+      <div class="desk-only" style="display:flex;align-items:center;gap:5px;margin-left:2px;">
+        <span style="font-size:9px;color:var(--muted2);font-weight:600">Aa</span>
+        <input type="range" id="labelSizeSlider" min="6" max="14" value="8" step="1"
+          oninput="onLabelSize(this.value)"
+          style="width:56px;height:3px;accent-color:var(--accent);cursor:pointer;opacity:.55;">
+      </div>
     </div>
     <div class="topbar-r">
       <div class="period-bar">
@@ -352,7 +358,7 @@ const CPM_BOM=5.0;
 const CPM_MEDIO=12.0;
 
 // ═══ ESTADO ═══
-let filtroLct=true, periodDays=30, dateI=null, dateF=null, showLabels=true;
+let filtroLct=true, periodDays=30, dateI=null, dateF=null, showLabels=true, labelSize=8;
 let pesFilters={};
 
 // ═══ UTILS ═══
@@ -455,7 +461,7 @@ function bo(extra={}){
 
 function makeDatalabels(color,suffix='',fmt=null){
   return{display:ctx=>showLabels&&ctx.datasetIndex===0,
-    color,font:{size:8,weight:'bold'},
+    color,font:{size:labelSize,weight:'bold'},
     formatter:(v,ctx)=>{
       if(v==null) return null;
       const total=ctx.dataset.data.filter(x=>x!=null).length;
@@ -552,7 +558,7 @@ function renderMeta(){
        datalabels:{...makeDatalabels('#3b82f6','',v=>v!=null?fN(v):null),display:ctx=>showLabels}},
       {label:'Invest.',data:md.spend,borderColor:'#059669',backgroundColor:'transparent',tension:.3,pointRadius:2,borderWidth:2,type:'line',spanGaps:true,datalabels:{display:false}},
       {label:'CPL',data:md.cpl,borderColor:'#111',borderDash:[5,3],backgroundColor:'transparent',tension:.3,pointRadius:2,borderWidth:1.5,type:'line',yAxisID:'y2',spanGaps:true,
-       datalabels:{display:ctx=>showLabels,color:'#333',font:{size:8,weight:'bold'},formatter:v=>v!=null?'R$'+v.toFixed(2):null,anchor:'end',align:'top',offset:2,clip:false}},
+       datalabels:{display:ctx=>showLabels,color:'#333',font:{size:labelSize,weight:'bold'},formatter:v=>v!=null?'R$'+v.toFixed(2):null,anchor:'end',align:'top',offset:2,clip:false}},
     ]},
     options:{...bo(),scales:{
       x:{ticks:{color:TXT(),font:bf,maxTicksLimit:14},grid:{color:GRID()}},
@@ -658,20 +664,18 @@ function calcTableFromRaw(){
 let _calcRawRunning=false;
 function getMT(){
   const key=getPeriodKey();
-  let base_mt;
-  if(key){
+  // Para "ontem" (key='1') sempre usar raw — garante que não inclui hoje
+  if(key && key!=='1'){
     const base=filtroLct?META_TABLES?.lct:META_TABLES?.all;
     if(!base) return null;
     base_mt=base[key]||base['all']||null;
   } else {
-    // Datas livres: calcular do raw (sem recursão)
     if(_calcRawRunning) return ((filtroLct?META_TABLES?.lct:META_TABLES?.all)||{})['all']||null;
     _calcRawRunning=true;
     const result=calcTableFromRaw();
     _calcRawRunning=false;
     base_mt=result||((filtroLct?META_TABLES?.lct:META_TABLES?.all)||{})['all']||null;
   }
-  // Filtrar por campanhas selecionadas no filtro da aba Meta
   if(metaCampSel?.size>0 && base_mt){
     return {
       camps:  (base_mt.camps||[]).filter(c=>metaCampSel.has(c.n)),
@@ -1161,7 +1165,7 @@ function renderDiarioCharts(){
       data:{labels:md.days,datasets:[
         {label:m.ttl,data,borderColor:COLOR,backgroundColor:COLOR+'18',fill:true,
          tension:.3,pointRadius:2,borderWidth:2,spanGaps:true,
-         datalabels:{display:ctx=>showLabels,color:COLOR,font:{size:8,weight:'bold'},
+         datalabels:{display:ctx=>showLabels,color:COLOR,font:{size:labelSize,weight:'bold'},
            formatter:(v,ctx)=>{
              if(v==null) return null;
              const tot=ctx.dataset.data.filter(x=>x!=null).length;
@@ -1312,6 +1316,10 @@ function setLct(on,btn){
 function toggleLabels(el){
   showLabels=!showLabels;
   el.classList.toggle('on',showLabels);
+  rerenderActive();
+}
+function onLabelSize(v){
+  labelSize=parseInt(v);
   rerenderActive();
 }
 
