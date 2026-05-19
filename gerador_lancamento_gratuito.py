@@ -132,6 +132,20 @@ def meta_daily_camps(df):
             result[key][camp]=build_daily(subset[subset["campaign"]==camp])
     return result
 
+_STATUS_PRIORITY = {"ACTIVE": 0, "WITH_ISSUES": 1, "PAUSED": 2,
+                    "ADSET_PAUSED": 3, "CAMPAIGN_PAUSED": 4, "ARCHIVED": 5}
+
+def _pick_status(group):
+    g = group[group["status"].notna() & (group["status"]!="") & (group["status"]!="NAN")]
+    if len(g)==0: return ""
+    g = g.sort_values("date")
+    last_date = g["date"].max()
+    last = g[g["date"]==last_date]
+    if (last["status"]=="ACTIVE").any(): return "ACTIVE"
+    statuses = last["status"].unique().tolist()
+    statuses.sort(key=lambda s: _STATUS_PRIORITY.get(s, 99))
+    return statuses[0]
+
 def meta_raw(df):
     # Status mais recente por campanha e conjunto
     camp_st={k:_pick_status(g) for k,g in df.groupby("campaign")}
