@@ -585,10 +585,6 @@ function getPeriodKey(){
 // Calcular tabelas a partir do META_RAW_CAMP filtrado por data
 function calcTableFromRaw(){
   if(!META_RAW_CAMP?.length) return null;
-  // Mapa de status — usa dados 'all' pré-calculados (têm status independente do período)
-  const _stBase=((filtroLct?META_TABLES?.lct:META_TABLES?.all)||{})['all']||{};
-  const _stCamp={};(_stBase.camps||[]).forEach(c=>{_stCamp[c.n]=c.status||'';});
-  const _stAdset={};(_stBase.adsets||[]).forEach(a=>{_stAdset[a.camp+'|||'+a.n]=a.status||'';});
   const hoje=getHoje();
   const fimRaw=new Date(hoje);
   if(periodDays===1) fimRaw.setDate(fimRaw.getDate()-1);
@@ -612,13 +608,15 @@ function calcTableFromRaw(){
   const adsetMap={};
   filtered.forEach(r=>{
     const ck=r.c;
-    if(!campMap[ck]) campMap[ck]={n:r.c,spend:0,imp:0,lc:0,pv:0,ld:0};
+    if(!campMap[ck]) campMap[ck]={n:r.c,spend:0,imp:0,lc:0,pv:0,ld:0,status:r.sc||''};
     campMap[ck].spend+=r.sp; campMap[ck].imp+=r.imp; campMap[ck].lc+=r.lc;
     campMap[ck].pv+=r.pv; campMap[ck].ld+=r.ld;
+    if(r.sc==='ACTIVE') campMap[ck].status='ACTIVE'; // ACTIVE tem prioridade
     const ak=r.c+'|||'+r.a;
-    if(!adsetMap[ak]) adsetMap[ak]={n:r.a,camp:r.c,spend:0,imp:0,lc:0,pv:0,ld:0};
+    if(!adsetMap[ak]) adsetMap[ak]={n:r.a,camp:r.c,spend:0,imp:0,lc:0,pv:0,ld:0,status:r.sa||''};
     adsetMap[ak].spend+=r.sp; adsetMap[ak].imp+=r.imp; adsetMap[ak].lc+=r.lc;
     adsetMap[ak].pv+=r.pv; adsetMap[ak].ld+=r.ld;
+    if(r.sa==='ACTIVE') adsetMap[ak].status='ACTIVE';
   });
 
   function calcRow(o){
@@ -629,8 +627,8 @@ function calcTableFromRaw(){
       cpl:ld>0?r2(sp/ld):null, cpm:imp>0?r2(sp/imp*1000):null};
   }
 
-  const camps=Object.values(campMap).map(o=>{const r=calcRow(o);r.status=_stCamp[r.n]||'';return r;}).sort((a,b)=>b.ld-a.ld);
-  const adsets=Object.values(adsetMap).map(o=>{const r=calcRow(o);r.status=_stAdset[r.camp+'|||'+r.n]||'';return r;}).sort((a,b)=>b.ld-a.ld);
+  const camps=Object.values(campMap).map(calcRow).sort((a,b)=>b.ld-a.ld);
+  const adsets=Object.values(adsetMap).map(calcRow).sort((a,b)=>b.ld-a.ld);
   // Ads: filtrar pelos adsets/camps que têm dados no período
   const campNamesInPeriod=new Set(camps.map(c=>c.n));
   const adsetPairs=new Set(adsets.map(a=>a.camp+'|||'+a.n));
