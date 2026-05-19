@@ -8,7 +8,6 @@ from pathlib import Path
 # ══════════════════════════════════════════════════════
 # CONFIG
 # ══════════════════════════════════════════════════════
-
 SHEET_ID         = "1s0UHuiOL17BdkrYEMC7bmcdQW5snl0agA6v8qoIVHAs"
 TEMPLATE_FILE    = "dashboard_lancamento_gratuito.html"
 OUTPUT_FILE      = "index.html"
@@ -136,6 +135,7 @@ _STATUS_PRIORITY = {"ACTIVE": 0, "WITH_ISSUES": 1, "PAUSED": 2,
                     "ADSET_PAUSED": 3, "CAMPAIGN_PAUSED": 4, "ARCHIVED": 5}
 
 def _pick_status(group):
+    if "status" not in group.columns: return ""
     g = group[group["status"].notna() & (group["status"]!="") & (group["status"]!="NAN")]
     if len(g)==0: return ""
     g = g.sort_values("date")
@@ -147,9 +147,10 @@ def _pick_status(group):
     return statuses[0]
 
 def meta_raw(df):
-    # Status mais recente por campanha e conjunto
-    camp_st={k:_pick_status(g) for k,g in df.groupby("campaign")}
-    adset_st={(c,a):_pick_status(g) for (c,a),g in df.groupby(["campaign","adset"])}
+    # Status mais recente por campanha e conjunto (só se coluna existir)
+    has_status = "status" in df.columns
+    camp_st={k:_pick_status(g) for k,g in df.groupby("campaign")} if has_status else {}
+    adset_st={(c,a):_pick_status(g) for (c,a),g in df.groupby(["campaign","adset"])} if has_status else {}
     rows=[]
     agg=df.groupby(["date","campaign","adset","is_lct"]).agg(
         spend=("spend","sum"),leads=("leads","sum"),
