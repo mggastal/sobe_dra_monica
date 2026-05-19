@@ -69,8 +69,7 @@ def load_meta():
     df=pd.read_csv(URL_META)
     df=df.rename(columns={
         "Date":"date","Campaign Name":"campaign","Adset Name":"adset",
-        "Ad Name":"ad","Thumbnail URL":"thumb","Status":"status",
-        "Spend (Cost, Amount Spent)":"spend",
+        "Ad Name":"ad","Thumbnail URL":"thumb","Spend (Cost, Amount Spent)":"spend",
         "Impressions":"impressions",
         "Action Link Clicks":"link_clicks",
         "Action Landing Page View":"page_view",
@@ -79,8 +78,6 @@ def load_meta():
     df["date"]=pd.to_datetime(df["date"],errors="coerce")
     for c in ["spend","impressions","link_clicks","page_view","leads"]:
         if c in df.columns: df[c]=to_num(df[c])
-    if "status" not in df.columns: df["status"]=""
-    df["status"]=df["status"].astype(str).str.strip().str.upper()
     df["is_lct"]=df["campaign"].str.contains(LANCAMENTO_COD,na=False,case=False) if LANCAMENTO_COD else True
     df=df.dropna(subset=["date"])
     print(f"     {len(df)} linhas | {df['date'].min().date()} → {df['date'].max().date()}")
@@ -134,26 +131,7 @@ def meta_daily_camps(df):
             result[key][camp]=build_daily(subset[subset["campaign"]==camp])
     return result
 
-_STATUS_PRIORITY = {"ACTIVE": 0, "WITH_ISSUES": 1, "PAUSED": 2,
-                    "ADSET_PAUSED": 3, "CAMPAIGN_PAUSED": 4, "ARCHIVED": 5}
-
-def _pick_status(group):
-    if "status" not in group.columns: return ""
-    g = group[group["status"].notna() & (group["status"]!="") & (group["status"]!="NAN")]
-    if len(g)==0: return ""
-    g = g.sort_values("date")
-    last_date = g["date"].max()
-    last = g[g["date"]==last_date]
-    if (last["status"]=="ACTIVE").any(): return "ACTIVE"
-    statuses = last["status"].unique().tolist()
-    statuses.sort(key=lambda s: _STATUS_PRIORITY.get(s, 99))
-    return statuses[0]
-
 def meta_raw(df):
-    # Status mais recente por campanha e conjunto (só se coluna existir)
-    has_status = "status" in df.columns
-    camp_st={k:_pick_status(g) for k,g in df.groupby("campaign")} if has_status else {}
-    adset_st={(c,a):_pick_status(g) for (c,a),g in df.groupby(["campaign","adset"])} if has_status else {}
     rows=[]
     agg=df.groupby(["date","campaign","adset","is_lct"]).agg(
         spend=("spend","sum"),leads=("leads","sum"),
@@ -166,8 +144,7 @@ def meta_raw(df):
             "lct":bool(r["is_lct"]),"sp":round(float(r["spend"]),2),
             "ld":int(r["leads"]),"imp":int(r["impressions"]),
             "lc":int(r["link_clicks"]),"pv":int(r["page_view"]),
-            "sc":camp_st.get(str(r["campaign"]),""),
-            "sa":adset_st.get((str(r["campaign"]),str(r["adset"])),"")
+
         })
     return rows
 
