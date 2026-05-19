@@ -608,15 +608,15 @@ function calcTableFromRaw(){
   const adsetMap={};
   filtered.forEach(r=>{
     const ck=r.c;
-    if(!campMap[ck]) campMap[ck]={n:r.c,spend:0,imp:0,lc:0,pv:0,ld:0,status:r.sc||''};
+    if(!campMap[ck]) campMap[ck]={n:r.c,spend:0,imp:0,lc:0,pv:0,ld:0};
     campMap[ck].spend+=r.sp; campMap[ck].imp+=r.imp; campMap[ck].lc+=r.lc;
     campMap[ck].pv+=r.pv; campMap[ck].ld+=r.ld;
-    if(r.sc==='ACTIVE') campMap[ck].status='ACTIVE'; // ACTIVE tem prioridade
+
     const ak=r.c+'|||'+r.a;
-    if(!adsetMap[ak]) adsetMap[ak]={n:r.a,camp:r.c,spend:0,imp:0,lc:0,pv:0,ld:0,status:r.sa||''};
+    if(!adsetMap[ak]) adsetMap[ak]={n:r.a,camp:r.c,spend:0,imp:0,lc:0,pv:0,ld:0};
     adsetMap[ak].spend+=r.sp; adsetMap[ak].imp+=r.imp; adsetMap[ak].lc+=r.lc;
     adsetMap[ak].pv+=r.pv; adsetMap[ak].ld+=r.ld;
-    if(r.sa==='ACTIVE') adsetMap[ak].status='ACTIVE';
+
   });
 
   function calcRow(o){
