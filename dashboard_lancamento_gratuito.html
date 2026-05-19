@@ -585,6 +585,10 @@ function getPeriodKey(){
 // Calcular tabelas a partir do META_RAW_CAMP filtrado por data
 function calcTableFromRaw(){
   if(!META_RAW_CAMP?.length) return null;
+  // Mapa de status — usa dados 'all' pré-calculados (têm status independente do período)
+  const _stBase=((filtroLct?META_TABLES?.lct:META_TABLES?.all)||{})['all']||{};
+  const _stCamp={};(_stBase.camps||[]).forEach(c=>{_stCamp[c.n]=c.status||'';});
+  const _stAdset={};(_stBase.adsets||[]).forEach(a=>{_stAdset[a.camp+'|||'+a.n]=a.status||'';});
   const hoje=getHoje();
   const fimRaw=new Date(hoje);
   if(periodDays===1) fimRaw.setDate(fimRaw.getDate()-1);
@@ -625,14 +629,8 @@ function calcTableFromRaw(){
       cpl:ld>0?r2(sp/ld):null, cpm:imp>0?r2(sp/imp*1000):null};
   }
 
-  // Status vem do META_TABLES['all'] — independe do período filtrado
-  const _allBase=((filtroLct?META_TABLES?.lct:META_TABLES?.all)||{})['all']||{};
-  const _cSt={};(_allBase.camps||[]).forEach(c=>{_cSt[c.n]=c.status||'';});
-  const _aSt={};(_allBase.adsets||[]).forEach(a=>{_aSt[a.camp+'|||'+a.n]=a.status||'';});
-  const _adSt={};(_allBase.ads||[]).forEach(a=>{_adSt[a.camp+'|||'+a.adset+'|||'+a.n]=a.status||'';});
-
-  const camps=Object.values(campMap).map(o=>{const r=calcRow(o);r.status=_cSt[r.n]||'';return r;}).sort((a,b)=>b.ld-a.ld);
-  const adsets=Object.values(adsetMap).map(o=>{const r=calcRow(o);r.status=_aSt[r.camp+'|||'+r.n]||'';return r;}).sort((a,b)=>b.ld-a.ld);
+  const camps=Object.values(campMap).map(o=>{const r=calcRow(o);r.status=_stCamp[r.n]||'';return r;}).sort((a,b)=>b.ld-a.ld);
+  const adsets=Object.values(adsetMap).map(o=>{const r=calcRow(o);r.status=_stAdset[r.camp+'|||'+r.n]||'';return r;}).sort((a,b)=>b.ld-a.ld);
   // Ads: filtrar pelos adsets/camps que têm dados no período
   const campNamesInPeriod=new Set(camps.map(c=>c.n));
   const adsetPairs=new Set(adsets.map(a=>a.camp+'|||'+a.n));
