@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Gerador Dashboard Lançamento Gratuito v1 — com Status (ACTIVE / PAUSED)"""
+"""Gerador Dashboard Lançamento Gratuito v1"""
 
 import pandas as pd, json, re, hashlib, requests
 from datetime import date
@@ -69,7 +69,7 @@ def load_meta():
     df=pd.read_csv(URL_META)
     df=df.rename(columns={
         "Date":"date","Campaign Name":"campaign","Adset Name":"adset",
-        "Ad Name":"ad","Thumbnail URL":"thumb","Status":"status",
+        "Ad Name":"ad","Thumbnail URL":"thumb",
         "Spend (Cost, Amount Spent)":"spend",
         "Impressions":"impressions",
         "Action Link Clicks":"link_clicks",
@@ -79,40 +79,10 @@ def load_meta():
     df["date"]=pd.to_datetime(df["date"],errors="coerce")
     for c in ["spend","impressions","link_clicks","page_view","leads"]:
         if c in df.columns: df[c]=to_num(df[c])
-    if "status" not in df.columns: df["status"]=""
-    df["status"]=df["status"].astype(str).str.strip().str.upper()
     df["is_lct"]=df["campaign"].str.contains(LANCAMENTO_COD,na=False,case=False) if LANCAMENTO_COD else True
     df=df.dropna(subset=["date"])
     print(f"     {len(df)} linhas | {df['date'].min().date()} → {df['date'].max().date()}")
     return df
-
-# ── STATUS HELPERS ────────────────────────────────────
-# Define o status "mais recente" por campanha, conjunto e anúncio.
-# Critério: pega a linha de data mais recente; em empates, prioriza ACTIVE.
-_STATUS_PRIORITY = {"ACTIVE": 0, "WITH_ISSUES": 1, "PAUSED": 2,
-                    "ADSET_PAUSED": 3, "CAMPAIGN_PAUSED": 4, "ARCHIVED": 5}
-
-def _pick_status(group):
-    # Filtra linhas com status válido
-    g = group[group["status"].notna() & (group["status"]!="") & (group["status"]!="NAN")]
-    if len(g)==0: return ""
-    # Pega data máxima
-    g = g.sort_values("date")
-    last_date = g["date"].max()
-    last = g[g["date"]==last_date]
-    # Se há ACTIVE na última data, prefere
-    if (last["status"]=="ACTIVE").any(): return "ACTIVE"
-    # Caso contrário, pega por prioridade
-    statuses = last["status"].unique().tolist()
-    statuses.sort(key=lambda s: _STATUS_PRIORITY.get(s, 99))
-    return statuses[0]
-
-def build_status_maps(df):
-    """Retorna dicts {nome: status} para campaign, adset, ad."""
-    camp_status = {k: _pick_status(g) for k,g in df.groupby("campaign")}
-    adset_status = {(c,a): _pick_status(g) for (c,a),g in df.groupby(["campaign","adset"])}
-    ad_status = {(c,a,n): _pick_status(g) for (c,a,n),g in df.groupby(["campaign","adset","ad"])}
-    return camp_status, adset_status, ad_status
 
 def calc_kpis(p):
     sp=float(p["spend"].sum()); imp=float(p["impressions"].sum())
@@ -163,6 +133,9 @@ def meta_daily_camps(df):
     return result
 
 def meta_raw(df):
+    # Status mais recente por campanha e conjunto
+    camp_st={k:_pick_status(g) for k,g in df.groupby("campaign")}
+    adset_st={(c,a):_pick_status(g) for (c,a),g in df.groupby(["campaign","adset"])}
     rows=[]
     agg=df.groupby(["date","campaign","adset","is_lct"]).agg(
         spend=("spend","sum"),leads=("leads","sum"),
@@ -174,11 +147,13 @@ def meta_raw(df):
             "d":r["date"].strftime("%d/%m"),"c":str(r["campaign"]),"a":str(r["adset"]),
             "lct":bool(r["is_lct"]),"sp":round(float(r["spend"]),2),
             "ld":int(r["leads"]),"imp":int(r["impressions"]),
-            "lc":int(r["link_clicks"]),"pv":int(r["page_view"])
+            "lc":int(r["link_clicks"]),"pv":int(r["page_view"]),
+            "sc":camp_st.get(str(r["campaign"]),""),
+            "sa":adset_st.get((str(r["campaign"]),str(r["adset"])),"")
         })
     return rows
 
-def meta_tables_period(df, p, img_dir, camp_status, adset_status, ad_status):
+def meta_tables_period(df, p, img_dir):
     def ag(sub,cols): return sub.groupby(cols).agg(spend=("spend","sum"),impressions=("impressions","sum"),link_clicks=("link_clicks","sum"),page_view=("page_view","sum"),leads=("leads","sum")).reset_index()
 
     def calc_row(r):
@@ -192,14 +167,10 @@ def meta_tables_period(df, p, img_dir, camp_status, adset_status, ad_status):
             "cpm":round(sp/imp*1000,2) if imp>0 else None}
 
     camps_agg=ag(p,"campaign")
-    camps=[{"n":str(r["campaign"]),"status":camp_status.get(str(r["campaign"]),""),**calc_row(r)}
-           for _,r in camps_agg.sort_values("leads",ascending=False).iterrows()]
+    camps=[{"n":str(r["campaign"]),**calc_row(r)} for _,r in camps_agg.sort_values("leads",ascending=False).iterrows()]
 
     adsets_agg=ag(p,["campaign","adset"])
-    adsets=[{"n":str(r["adset"]),"camp":str(r["campaign"]),
-             "status":adset_status.get((str(r["campaign"]),str(r["adset"])),""),
-             **calc_row(r)}
-            for _,r in adsets_agg.sort_values("leads",ascending=False).iterrows()]
+    adsets=[{"n":str(r["adset"]),"camp":str(r["campaign"]),**calc_row(r)} for _,r in adsets_agg.sort_values("leads",ascending=False).iterrows()]
 
     # Thumbs do df completo
     df_full_thumb=df[df["thumb"].notna()&(df["thumb"].astype(str)!="nan")] if "thumb" in df.columns else pd.DataFrame()
@@ -214,7 +185,6 @@ def meta_tables_period(df, p, img_dir, camp_status, adset_status, ad_status):
         sp=round(float(r["spend"]),2); imp=int(r["impressions"]); lc=int(r["link_clicks"]); ld=int(r["leads"])
         k=(str(r["ad"]),str(r["adset"]),str(r["campaign"]))
         ads.append({"n":str(r["ad"]),"adset":str(r["adset"]),"camp":str(r["campaign"]),
-            "status":ad_status.get((str(r["campaign"]),str(r["adset"]),str(r["ad"])),""),
             "thumb":thumb_map.get(k,""),"spend":sp,"imp":imp,"lc":lc,"ld":ld,
             "ctr":round(lc/imp*100,2) if imp>0 else None,
             "cpl":round(sp/ld,2) if ld>0 else None})
@@ -222,13 +192,22 @@ def meta_tables_period(df, p, img_dir, camp_status, adset_status, ad_status):
 
 def meta_tables(df, img_dir):
     hoje=pd.Timestamp(date.today())
-    # Status maps construídos a partir do df COMPLETO (mais recente histórico)
-    camp_status, adset_status, ad_status = build_status_maps(df)
+    ontem=hoje-pd.Timedelta(days=1)
     result={"lct":{},"all":{}}
+    period_ranges={
+        "1":  (ontem, ontem),
+        "7":  (hoje-pd.Timedelta(days=6), hoje),
+        "14": (hoje-pd.Timedelta(days=13), hoje),
+        "30": (hoje-pd.Timedelta(days=29), hoje),
+        "all": (None, None),
+    }
     for key,subset in [("lct",df[df["is_lct"]]),("all",df)]:
-        for pname,n in [("1",1),("7",7),("14",14),("30",30),("all",0)]:
-            p=subset[subset["date"]>=hoje-pd.Timedelta(days=n-1)] if n>0 else subset
-            result[key][pname]=meta_tables_period(df,p,img_dir,camp_status,adset_status,ad_status)
+        for pname,(start,end) in period_ranges.items():
+            if start is None:
+                p=subset
+            else:
+                p=subset[(subset["date"]>=start)&(subset["date"]<=end)]
+            result[key][pname]=meta_tables_period(df,p,img_dir)
             print(f"     [{key}][{pname}]: {len(result[key][pname]['camps'])} camps | {len(result[key][pname]['ads'])} ads")
     return result
 
@@ -341,13 +320,33 @@ def pesquisa_process(df, total_leads):
 
 # ══ INJEÇÃO ════════════════════════════════════════════
 def replace_js_const(html, name, value):
-    pattern=rf"const {name}\s*=\s*(?:null|true|false|-?\d[\d\.]*|'[^']*'|\"[^\"]*\"|\{{[\s\S]*?\}}|\[[\s\S]*?\])\s*;"
-    replacement=f"const {name} = {json.dumps(value,ensure_ascii=False)};"
-    found=[0]
-    def do_replace(m): found[0]+=1; return replacement
-    new_html=re.sub(pattern,do_replace,html,count=1)
-    if not found[0]: print(f"  AVISO: não encontrou const {name}")
-    return new_html
+    """Substitui 'const NAME = <valor>;' no HTML, mesmo com objetos/arrays aninhados."""
+    replacement = f"const {name} = {json.dumps(value, ensure_ascii=False)};"
+    pattern_start = re.compile(rf"const {name}\s*=\s*")
+    m = pattern_start.search(html)
+    if not m:
+        print(f"  AVISO: não encontrou const {name}")
+        return html
+    start = m.start()
+    val_start = m.end()
+    i = val_start
+    depth = 0
+    in_str = False
+    str_char = None
+    while i < len(html):
+        ch = html[i]
+        if in_str:
+            if ch == '\\': i += 2; continue
+            if ch == str_char: in_str = False
+        else:
+            if ch in ('"', "'", '`'): in_str = True; str_char = ch
+            elif ch in ('{', '['): depth += 1
+            elif ch in ('}', ']'): depth -= 1
+            elif ch == ';' and depth == 0: break
+        i += 1
+    end = i + 1
+    html = html[:start] + replacement + html[end:]
+    return html
 
 def inject_all(tpl, meta_k, meta_d, meta_dc, meta_raw_c, meta_t, meta_bd, pes):
     html=Path(tpl).read_text(encoding="utf-8")
@@ -393,9 +392,13 @@ def main():
     print(f"  ✓ {total_leads} leads | R$ {m_k['lct']['spend']:,.2f} invest.")
 
     print("\n[PESQUISA]")
-    df_pes=load_pesquisa()
-    pes=pesquisa_process(df_pes, total_leads)
-    print(f"  ✓ {pes['total']} respostas")
+    if USAR_PESQUISA:
+        df_pes=load_pesquisa()
+        pes=pesquisa_process(df_pes, total_leads)
+        print(f"  ✓ {pes['total']} respostas")
+    else:
+        pes=None
+        print("  (desativada)")
 
     print("\n[HTML]")
     if not Path(TEMPLATE_FILE).exists():
