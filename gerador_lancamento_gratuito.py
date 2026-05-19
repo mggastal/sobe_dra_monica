@@ -8,6 +8,7 @@ from pathlib import Path
 # ══════════════════════════════════════════════════════
 # CONFIG
 # ══════════════════════════════════════════════════════
+
 SHEET_ID         = "1s0UHuiOL17BdkrYEMC7bmcdQW5snl0agA6v8qoIVHAs"
 TEMPLATE_FILE    = "dashboard_lancamento_gratuito.html"
 OUTPUT_FILE      = "index.html"
@@ -68,7 +69,7 @@ def load_meta():
     df=pd.read_csv(URL_META)
     df=df.rename(columns={
         "Date":"date","Campaign Name":"campaign","Adset Name":"adset",
-        "Ad Name":"ad","Thumbnail URL":"thumb",
+        "Ad Name":"ad","Thumbnail URL":"thumb","Status":"status",
         "Spend (Cost, Amount Spent)":"spend",
         "Impressions":"impressions",
         "Action Link Clicks":"link_clicks",
@@ -78,6 +79,8 @@ def load_meta():
     df["date"]=pd.to_datetime(df["date"],errors="coerce")
     for c in ["spend","impressions","link_clicks","page_view","leads"]:
         if c in df.columns: df[c]=to_num(df[c])
+    if "status" not in df.columns: df["status"]=""
+    df["status"]=df["status"].astype(str).str.strip().str.upper()
     df["is_lct"]=df["campaign"].str.contains(LANCAMENTO_COD,na=False,case=False) if LANCAMENTO_COD else True
     df=df.dropna(subset=["date"])
     print(f"     {len(df)} linhas | {df['date'].min().date()} → {df['date'].max().date()}")
