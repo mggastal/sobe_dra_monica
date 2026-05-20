@@ -19,6 +19,8 @@ COR_ACENTO       = "#0ea5e9"
 
 LANCAMENTO_COD   = "RDC02"        # filtra campanhas; "" = ver tudo
 USAR_PESQUISA    = True            # False = oculta aba Pesquisa
+USAR_VENDAS      = True            # False = oculta menu Vendas (Hotmart)
+
 
 # Metas do funil — define cores (verde/amarelo/vermelho)
 CPL_BOM          = 5.0    # Custo por Lead ≤ 5 → verde | 5-10 → amarelo | acima → vermelho
@@ -38,6 +40,7 @@ URL_META = sheet_url("meta-ads")
 URL_PES  = sheet_url("Pesquisa")
 URL_GA   = sheet_url("breakdown-gender-age")
 URL_PT   = sheet_url("breakdown-platform")
+URL_HOTMART = sheet_url("hotmart")
 
 def to_num(s):
     if pd.api.types.is_numeric_dtype(s): return s.fillna(0)
@@ -282,6 +285,50 @@ def meta_breakdowns(df):
     result['_raw_ga']=raw_ga; result['_raw_pt']=raw_pt
     return result
 
+# ══ HOTMART ═══════════════════════════════════════════
+def hotmart_data():
+    print("  Lendo hotmart...")
+    try:
+        df=pd.read_csv(URL_HOTMART)
+        df=df.rename(columns={
+            "Sales History Order Date":"date",
+            "Sales History Price":"price",
+            "Sales History Transaction Status":"status",
+            "Sales History Tracking Source SCK":"sck",
+            "Captacao_Campaign":"utm_camp",
+            "Captacao_Medium":"utm_medium",
+            "Captacao_Content":"utm_content",
+        })
+        df["date"]=pd.to_datetime(df["date"],errors="coerce")
+        df["price"]=to_num(df["price"])
+        df=df[df["status"]=="APPROVED"].dropna(subset=["date"])
+        print(f"     {len(df)} vendas aprovadas | R${df['price'].sum():,.2f}")
+
+        # Diário
+        dg=df.groupby(df["date"].dt.strftime("%d/%m")).agg(
+            vendas=("price","count"),receita=("price","sum")
+        ).reset_index().sort_values("date")
+        daily={"days":dg["date"].tolist(),"vendas":dg["vendas"].tolist(),"receita":[round(v,2) for v in dg["receita"]]}
+
+        # Canal (primeiro elemento do SCK)
+        df["canal"]=df["sck"].astype(str).str.split("|").str[0]
+        cg=df.groupby("canal").agg(v=("price","count"),r=("price","sum")).reset_index().sort_values("v",ascending=False)
+        canal=[{"n":str(r["canal"]),"v":int(r["v"]),"r":round(float(r["r"]),2)} for _,r in cg.iterrows()]
+
+        # SCK detalhado
+        sg=df.groupby("sck").agg(v=("price","count"),r=("price","sum")).reset_index().sort_values("v",ascending=False)
+        sck=[{"n":str(r["sck"]),"v":int(r["v"]),"r":round(float(r["r"]),2)} for _,r in sg.iterrows()]
+
+        # UTM Campaign
+        utm_camp=[]
+        if "utm_camp" in df.columns:
+            ug=df.groupby("utm_camp").agg(v=("price","count"),r=("price","sum")).reset_index().sort_values("v",ascending=False)
+            utm_camp=[{"n":str(r["utm_camp"]),"v":int(r["v"]),"r":round(float(r["r"]),2)} for _,r in ug.iterrows()]
+
+        return {"daily":daily,"canal":canal,"sck":sck,"utm_camp":utm_camp}
+    except Exception as e:
+        print(f"  Aviso Hotmart: {e}"); return None
+
 # ══ PESQUISA ══════════════════════════════════════════
 def load_pesquisa():
     print("  Lendo pesquisa..."); return pd.read_csv(sheet_url("Pesquisa"))
@@ -343,7 +390,7 @@ def replace_js_const(html, name, value):
     html = html[:start] + replacement + html[end:]
     return html
 
-def inject_all(tpl, meta_k, meta_d, meta_dc, meta_raw_c, meta_t, meta_bd, pes):
+def inject_all(tpl, meta_k, meta_d, meta_dc, meta_raw_c, meta_t, meta_bd, pes, hotmart):
     html=Path(tpl).read_text(encoding="utf-8")
     html=replace_js_const(html,"META_KPIS",     meta_k)
     html=replace_js_const(html,"META_DAILY",     meta_d)
@@ -352,7 +399,7 @@ def inject_all(tpl, meta_k, meta_d, meta_dc, meta_raw_c, meta_t, meta_bd, pes):
     html=replace_js_const(html,"META_TABLES",    meta_t)
     html=replace_js_const(html,"META_BD",        meta_bd)
     html=replace_js_const(html,"PESQUISA", pes if USAR_PESQUISA else False)
-    from datetime import timezone, timedelta
+    html=replace_js_const(html,"HOTMART", hotmart if USAR_VENDAS else False)
     html=replace_js_const(html,"DATA_GERACAO", date.today().strftime("%Y-%m-%d"))
     # Suporte a CPL_BOM ou CPA_BOM (retrocompatibilidade)
     _cpl_bom   = globals().get("CPL_BOM",   globals().get("CPA_BOM",   5.0))
@@ -395,10 +442,17 @@ def main():
         pes=None
         print("  (desativada)")
 
+    print("\n[HOTMART]")
+    if USAR_VENDAS:
+        hotmart=hotmart_data()
+    else:
+        hotmart=None
+        print("  (desativado)")
+
     print("\n[HTML]")
     if not Path(TEMPLATE_FILE).exists():
         print(f"  ERRO: {TEMPLATE_FILE} não encontrado"); return
-    html=inject_all(TEMPLATE_FILE,m_k,m_d,m_dc,m_raw,m_t,m_bd,pes)
+    html=inject_all(TEMPLATE_FILE,m_k,m_d,m_dc,m_raw,m_t,m_bd,pes,hotmart)
     Path(OUTPUT_FILE).write_text(html,encoding="utf-8")
     print(f"  ✓ {OUTPUT_FILE} ({len(html)//1024}KB)")
 
