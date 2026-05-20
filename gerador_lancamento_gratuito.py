@@ -371,8 +371,7 @@ def hotmart_data():
         def fmt_pgto(m):
             return "PIX" if ("ONEY" in str(m).upper() or "FINANCED" in str(m).upper()) else "Cartão de Crédito"
         def fmt_pgto_full(m):
-            m=str(m).replace("CREDIT_CARD_","").replace("_"," ").title()
-            return m.replace("Financed Installment Adyen Oney 12X","PIX Parcelado (Oney)")
+            return "PIX" if ("ONEY" in str(m).upper() or "FINANCED" in str(m).upper()) else "Cartão de Crédito"
         df["tipo_pgto"]=df["pgto_raw"].fillna("").apply(fmt_pgto)
         pg=df.groupby("tipo_pgto").agg(v=("price","count"),r=("price","sum")).reset_index().sort_values("v",ascending=False)
         pagamentos=[{"n":str(r["tipo_pgto"]),"v":int(r["v"]),"r":round(float(r["r"]),2)} for _,r in pg.iterrows()]
