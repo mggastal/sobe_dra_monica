@@ -72,8 +72,8 @@ def load_meta():
     df=pd.read_csv(URL_META)
     df=df.rename(columns={
         "Date":"date","Campaign Name":"campaign","Adset Name":"adset",
-        "Ad Name":"ad","Thumbnail URL":"thumb","Spend (Cost, Amount Spent)":"spend",
-        "Impressions":"impressions",
+        "Ad Name":"ad","Thumbnail URL":"thumb","Status":"status",
+        "Spend (Cost, Amount Spent)":"spend","Impressions":"impressions",
         "Action Link Clicks":"link_clicks",
         "Action Landing Page View":"page_view",
         "Action Leads":"leads"
@@ -81,6 +81,8 @@ def load_meta():
     df["date"]=pd.to_datetime(df["date"],errors="coerce")
     for c in ["spend","impressions","link_clicks","page_view","leads"]:
         if c in df.columns: df[c]=to_num(df[c])
+    if "status" not in df.columns: df["status"]=""
+    df["status"]=df["status"].astype(str).str.strip().str.upper()
     df["is_lct"]=df["campaign"].str.contains(LANCAMENTO_COD,na=False,case=False) if LANCAMENTO_COD else True
     df=df.dropna(subset=["date"])
     print(f"     {len(df)} linhas | {df['date'].min().date()} → {df['date'].max().date()}")
@@ -134,7 +136,23 @@ def meta_daily_camps(df):
             result[key][camp]=build_daily(subset[subset["campaign"]==camp])
     return result
 
+_STATUS_PRIORITY={"ACTIVE":0,"WITH_ISSUES":1,"PAUSED":2,"ADSET_PAUSED":3,"CAMPAIGN_PAUSED":4,"ARCHIVED":5}
+
+def _pick_status(group):
+    if "status" not in group.columns: return ""
+    g=group[group["status"].notna()&(group["status"]!="")&(group["status"]!="NAN")]
+    if len(g)==0: return ""
+    last_date=g["date"].max()
+    last=g[g["date"]==last_date]
+    if (last["status"]=="ACTIVE").any(): return "ACTIVE"
+    statuses=last["status"].unique().tolist()
+    statuses.sort(key=lambda s:_STATUS_PRIORITY.get(s,99))
+    return statuses[0]
+
 def meta_raw(df):
+    has_status="status" in df.columns
+    camp_st={k:_pick_status(g) for k,g in df.groupby("campaign")} if has_status else {}
+    adset_st={(c,a):_pick_status(g) for (c,a),g in df.groupby(["campaign","adset"])} if has_status else {}
     rows=[]
     agg=df.groupby(["date","campaign","adset","is_lct"]).agg(
         spend=("spend","sum"),leads=("leads","sum"),
@@ -147,7 +165,8 @@ def meta_raw(df):
             "lct":bool(r["is_lct"]),"sp":round(float(r["spend"]),2),
             "ld":int(r["leads"]),"imp":int(r["impressions"]),
             "lc":int(r["link_clicks"]),"pv":int(r["page_view"]),
-
+            "sc":camp_st.get(str(r["campaign"]),""),
+            "sa":adset_st.get((str(r["campaign"]),str(r["adset"])),""),
         })
     return rows
 
@@ -164,11 +183,16 @@ def meta_tables_period(df, p, img_dir):
             "cpl":round(sp/ld,2) if ld>0 else None,
             "cpm":round(sp/imp*1000,2) if imp>0 else None}
 
+    # Mapas de status usando df completo (não só o período filtrado)
+    camp_st={k:_pick_status(g) for k,g in df.groupby("campaign")}
+    adset_st={(c,a):_pick_status(g) for (c,a),g in df.groupby(["campaign","adset"])}
+    ad_st={(c,a,n):_pick_status(g) for (c,a,n),g in df.groupby(["campaign","adset","ad"])}
+
     camps_agg=ag(p,"campaign")
-    camps=[{"n":str(r["campaign"]),**calc_row(r)} for _,r in camps_agg.sort_values("leads",ascending=False).iterrows()]
+    camps=[{"n":str(r["campaign"]),"status":camp_st.get(str(r["campaign"]),""),**calc_row(r)} for _,r in camps_agg.sort_values("leads",ascending=False).iterrows()]
 
     adsets_agg=ag(p,["campaign","adset"])
-    adsets=[{"n":str(r["adset"]),"camp":str(r["campaign"]),**calc_row(r)} for _,r in adsets_agg.sort_values("leads",ascending=False).iterrows()]
+    adsets=[{"n":str(r["adset"]),"camp":str(r["campaign"]),"status":adset_st.get((str(r["campaign"]),str(r["adset"])),""),**calc_row(r)} for _,r in adsets_agg.sort_values("leads",ascending=False).iterrows()]
 
     # Thumbs do df completo
     df_full_thumb=df[df["thumb"].notna()&(df["thumb"].astype(str)!="nan")] if "thumb" in df.columns else pd.DataFrame()
@@ -183,6 +207,7 @@ def meta_tables_period(df, p, img_dir):
         sp=round(float(r["spend"]),2); imp=int(r["impressions"]); lc=int(r["link_clicks"]); ld=int(r["leads"])
         k=(str(r["ad"]),str(r["adset"]),str(r["campaign"]))
         ads.append({"n":str(r["ad"]),"adset":str(r["adset"]),"camp":str(r["campaign"]),
+            "status":ad_st.get((str(r["campaign"]),str(r["adset"]),str(r["ad"])),""),
             "thumb":thumb_map.get(k,""),"spend":sp,"imp":imp,"lc":lc,"ld":ld,
             "ctr":round(lc/imp*100,2) if imp>0 else None,
             "cpl":round(sp/ld,2) if ld>0 else None})
