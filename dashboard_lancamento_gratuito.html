@@ -196,6 +196,8 @@ details.desk-only{display:block!important;}
   .g2,.g3,.g73{grid-template-columns:1fr;}
   .pizza-grid{grid-template-columns:1fr;}
   .tc{overflow-x:auto;}
+  #vendasHoraGrid{grid-template-columns:1fr!important;}
+  #vendasHoraGrid>div canvas{max-height:90px;}
   .utm-groups{grid-template-columns:1fr;}
   .pes-kpis{grid-template-columns:1fr 1fr;}
   .daily-row{grid-template-columns:1fr;}
@@ -220,8 +222,9 @@ details.desk-only{display:block!important;}
     <button class="sb-item" onclick="goPage('diario',this)"><span class="ico">📈</span>Métricas Diárias</button>
     <button class="sb-item" id="sbPesquisa" onclick="goPage('pesquisa',this)"><span class="ico">🔍</span>Pesquisa</button>
     <div id="sbVendasGroup" style="display:none">
-      <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,.25);text-transform:uppercase;letter-spacing:1.5px;padding:12px 10px 4px">Vendas</div>
+      <div id="sbVendasLabel" style="font-size:9px;font-weight:700;color:rgba(255,255,255,.25);text-transform:uppercase;letter-spacing:1.5px;padding:12px 10px 4px">Vendas</div>
       <button class="sb-item" id="sbVendas" onclick="goPage('vendas',this)"><span class="ico">💰</span>Visão Geral</button>
+      <button class="sb-item" onclick="goPage('vendas-lista',this)"><span class="ico">📋</span>Vendas Diárias</button>
     </div>
   </nav>
   <div class="sb-lct"><div class="sb-lct-lbl">Lançamento</div><div class="sb-lct-val" id="sbLct">—</div></div>
@@ -334,6 +337,37 @@ details.desk-only{display:block!important;}
         </div>
       </details>
       <div class="pizza-grid" id="pizzaGrid"></div>
+    </div>
+
+    <!-- VENDAS LISTA -->
+    <div class="page-section" id="page-vendas-lista">
+      <div style="margin-bottom:16px">
+        <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700">Vendas Diárias</div>
+        <div style="font-size:12px;color:var(--muted)">Todas as vendas aprovadas · período do lançamento</div>
+      </div>
+      <!-- Análise Diária - gráficos por hora -->
+      <div style="margin-bottom:6px">
+        <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:2px">Análise Diária</div>
+        <div style="font-size:11px;color:var(--muted2);margin-bottom:12px">Vendas acumuladas por horário em cada dia do lançamento</div>
+        <div id="vendasHoraGrid" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:18px;max-width:100%;overflow:hidden"></div>
+      </div>
+
+      <div class="cc mb14" style="padding:0">
+        <div style="overflow-x:auto">
+          <table id="tblVendasLista" style="width:100%;border-collapse:collapse;min-width:700px">
+            <thead><tr style="background:var(--surface2)">
+              <th style="font-size:9px;padding:8px 12px;text-align:left;color:var(--muted);text-transform:uppercase;white-space:nowrap">Data</th>
+              <th style="font-size:9px;padding:8px 12px;text-align:left;color:var(--muted);text-transform:uppercase;white-space:nowrap">Nome</th>
+              <th style="font-size:9px;padding:8px 12px;text-align:left;color:var(--muted);text-transform:uppercase;white-space:nowrap">E-mail</th>
+              <th class="num" style="font-size:9px;padding:8px 12px;color:var(--muted);text-transform:uppercase;white-space:nowrap">Valor</th>
+              <th style="font-size:9px;padding:8px 12px;text-align:left;color:var(--muted);text-transform:uppercase;white-space:nowrap">Pagamento</th>
+              <th style="font-size:9px;padding:8px 12px;text-align:left;color:var(--muted);text-transform:uppercase;white-space:nowrap">Campanha</th>
+              <th style="font-size:9px;padding:8px 12px;text-align:left;color:var(--muted);text-transform:uppercase;white-space:nowrap">SCK</th>
+            </tr></thead>
+            <tbody id="tblVendasListaBody"></tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
     <!-- VENDAS -->
@@ -1358,6 +1392,76 @@ function buildPizzas(){
   });
 }
 
+// ═══ TABELA DE VENDAS DIÁRIAS ═══
+function renderVendasLista(){
+  if(!HOTMART?.vendas_raw?.length) return;
+  const fRec=v=>'R$'+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const HL=getComputedStyle(document.documentElement).getPropertyValue('--hotmart').trim()||'#ff6b00';
+  const rows=HOTMART.vendas_raw;
+
+  // Agregar por dia e hora
+  const diasMap={};
+  rows.forEach(r=>{
+    if(!diasMap[r.dia]) diasMap[r.dia]=new Array(24).fill(0);
+    if(r.hora>=0&&r.hora<24) diasMap[r.dia][r.hora]++;
+  });
+  const dias=Object.keys(diasMap).sort();
+  const grid=document.getElementById('vendasHoraGrid');
+  if(grid){
+    Object.keys(CH).filter(k=>k.startsWith('chHora_')).forEach(k=>{try{CH[k].destroy();}catch(e){}delete CH[k];});
+    grid.innerHTML='';
+    dias.forEach(dia=>{
+      const horas=diasMap[dia];
+      const total=horas.reduce((a,b)=>a+b,0);
+      // Linha cumulativa: somar hora a hora
+      const cumul=[];let acc=0;
+      for(let h=0;h<24;h++){acc+=horas[h];cumul.push(acc);}
+      const id='chHora_'+dia.replace('/','_');
+      const card=document.createElement('div');
+      card.style.cssText='background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px 10px 8px;box-shadow:var(--sh);min-width:0;overflow:hidden';
+      card.innerHTML='<div style="font-size:10px;font-weight:700;margin-bottom:6px;color:var(--text)">'+dia+' <span style="color:'+HL+';font-weight:700">'+total+' venda'+(total!==1?'s':'')+'</span></div><div style="height:100px"><canvas id="'+id+'"></canvas></div>';
+      grid.appendChild(card);
+      setTimeout(()=>{
+        const ctx=document.getElementById(id);
+        if(!ctx) return;
+        const labels=Array.from({length:24},(_,i)=>i%4===0?String(i).padStart(2,'0')+'h':'');
+        CH[id]=new Chart(ctx,{type:'line',
+          data:{labels,datasets:[{
+            data:cumul,
+            borderColor:HL,backgroundColor:HL+'22',
+            fill:true,tension:.4,pointRadius:0,pointHoverRadius:5,borderWidth:2,
+            datalabels:{display:false}
+          }]},
+          options:{responsive:true,maintainAspectRatio:false,
+            interaction:{mode:'index',intersect:false},
+            plugins:{legend:{display:false},
+              tooltip:{mode:'index',intersect:false,callbacks:{title:ctx=>'Hora '+String(ctx[0].dataIndex).padStart(2,'0')+':00',label:ctx=>ctx.raw+' venda'+(ctx.raw!==1?'s acumuladas':' acumulada')}}},
+            scales:{
+              x:{ticks:{color:TXT(),font:{size:7},maxRotation:0},grid:{display:false}},
+              y:{ticks:{color:TXT(),font:{size:7},stepSize:1},grid:{color:GRID()},min:0,max:total||1}
+            }}
+        });
+      },50);
+    });
+  }
+
+  // Tabela
+  let html='';
+  rows.forEach(r=>{
+    html+='<tr style="border-bottom:1px solid var(--border)">'+
+      '<td style="font-size:11px;padding:7px 12px;white-space:nowrap;color:var(--muted)">'+r.d+'</td>'+
+      '<td style="font-size:11px;padding:7px 12px;white-space:nowrap;font-weight:600">'+r.nome+'</td>'+
+      '<td style="font-size:11px;padding:7px 12px;white-space:nowrap;color:var(--muted)">'+r.email+'</td>'+
+      '<td class="num" style="font-size:11px;padding:7px 12px;color:'+HL+';font-weight:700;white-space:nowrap">'+fRec(r.valor)+'</td>'+
+      '<td style="font-size:11px;padding:7px 12px;white-space:nowrap">'+r.pgto+'</td>'+
+      '<td style="font-size:10px;padding:7px 12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)" title="'+r.camp+'">'+r.camp+'</td>'+
+      '<td style="font-size:10px;padding:7px 12px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted2)" title="'+r.sck+'">'+r.sck+'</td>'+
+    '</tr>';
+  });
+  document.getElementById('tblVendasListaBody').innerHTML=html;
+}
+
+
 // ═══ VENDAS ═══
 function isSem(n){return /^(sem |e-mail não encontrado)/i.test(n);}
 function tblVendas(elId, data, colLbl, receitaCor){
@@ -1547,7 +1651,8 @@ function rerenderActive(){
   if(p==='meta')     renderMeta();
   if(p==='diario')   renderDiario();
   if(p==='pesquisa') renderPesquisa();
-  if(p==='vendas')   renderVendas();
+  if(p==='vendas')     renderVendas();
+  if(p==='vendas-lista') renderVendasLista();
   setTimeout(()=>{Object.values({...CH,...PC}).forEach(c=>{try{c.resize();}catch(e){}});},60);
 }
 
@@ -1557,12 +1662,13 @@ function goPage(p,btn){
   document.querySelectorAll('.sb-item').forEach(e=>e.classList.remove('active'));
   document.getElementById('page-'+p).classList.add('active');
   if(btn) btn.classList.add('active');
-  const titles={meta:'Meta Ads',diario:'Métricas Diárias',pesquisa:'Pesquisa',vendas:'Vendas'};
+  const titles={meta:'Meta Ads',diario:'Métricas Diárias',pesquisa:'Pesquisa',vendas:'Vendas','vendas-lista':'Vendas Diárias'};
   document.getElementById('pageTitle').textContent=titles[p]||p;
   if(p==='meta')     renderMeta();
   if(p==='diario')   renderDiario();
   if(p==='pesquisa') renderPesquisa();
-  if(p==='vendas')   renderVendas();
+  if(p==='vendas')     renderVendas();
+  if(p==='vendas-lista') renderVendasLista();
   setTimeout(()=>{Object.values({...CH,...PC}).forEach(c=>{try{c.resize();}catch(e){}});},80);
   if(window.innerWidth<=768) closeSb();
 }
