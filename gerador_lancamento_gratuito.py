@@ -325,7 +325,21 @@ def hotmart_data():
             ug=df.groupby("utm_camp").agg(v=("price","count"),r=("price","sum")).reset_index().sort_values("v",ascending=False)
             utm_camp=[{"n":str(r["utm_camp"]),"v":int(r["v"]),"r":round(float(r["r"]),2)} for _,r in ug.iterrows()]
 
-        return {"daily":daily,"canal":canal,"sck":sck,"utm_camp":utm_camp}
+        # Raw — uma linha por venda para filtro de período no HTML
+        raw_rows=[]
+        for _,row in df.iterrows():
+            sck_v=str(row['sck']) if pd.notna(row['sck']) else ''
+            canal_v=sck_v.split('|')[0] if sck_v else ''
+            canal_v='Sem rastreio' if canal_v in ('','nan') else canal_v
+            camp_v=str(row.get('utm_camp','')) if pd.notna(row.get('utm_camp','')) else ''
+            metodo_v=str(row.get('Sales History Payment Method','')) if 'Sales History Payment Method' in row.index and pd.notna(row.get('Sales History Payment Method')) else ''
+            pgto_v='PIX' if ('ONEY' in metodo_v.upper() or 'FINANCED' in metodo_v.upper()) else 'Cartão de Crédito'
+            temp_v='Quente' if 'QUENTE' in camp_v.upper() else ('Frio' if 'FRIO' in camp_v.upper() else 'Sem rastreio')
+            raw_rows.append({'d':row['date'].strftime('%d/%m'),'r':round(float(row['price']),2),
+                'sck':sck_v,'canal':canal_v,'camp':camp_v if camp_v not in ('','nan','NaN') else '',
+                'temp':temp_v,'pgto':pgto_v})
+
+        return {"daily":daily,"canal":canal,"sck":sck,"utm_camp":utm_camp,"raw":raw_rows}
     except Exception as e:
         print(f"  Aviso Hotmart: {e}"); return None
 
