@@ -1425,20 +1425,38 @@ function renderVendasLista(){
         const ctx=document.getElementById(id);
         if(!ctx) return;
         const labels=Array.from({length:24},(_,i)=>i%4===0?String(i).padStart(2,'0')+'h':'');
-        CH[id]=new Chart(ctx,{type:'line',
-          data:{labels,datasets:[{
-            data:cumul,
-            borderColor:HL,backgroundColor:HL+'22',
-            fill:true,tension:.4,pointRadius:0,pointHoverRadius:5,borderWidth:2,
-            datalabels:{display:false}
-          }]},
+        CH[id]=new Chart(ctx,{type:'bar',
+          data:{labels,datasets:[
+            {
+              type:'bar',
+              data:horas,
+              backgroundColor:HL+'55',
+              borderRadius:2,
+              yAxisID:'y',
+              datalabels:{display:false}
+            },
+            {
+              type:'line',
+              data:cumul,
+              borderColor:HL,backgroundColor:'transparent',
+              tension:.4,pointRadius:0,pointHoverRadius:5,borderWidth:2,
+              yAxisID:'y2',
+              datalabels:{display:false}
+            }
+          ]},
           options:{responsive:true,maintainAspectRatio:false,
             interaction:{mode:'index',intersect:false},
             plugins:{legend:{display:false},
-              tooltip:{mode:'index',intersect:false,callbacks:{title:ctx=>'Hora '+String(ctx[0].dataIndex).padStart(2,'0')+':00',label:ctx=>ctx.raw+' venda'+(ctx.raw!==1?'s acumuladas':' acumulada')}}},
+              tooltip:{mode:'index',intersect:false,callbacks:{
+                title:ctx=>'Hora '+String(ctx[0].dataIndex).padStart(2,'0')+':00',
+                label:ctx=>ctx.datasetIndex===0
+                  ?ctx.raw+' venda'+(ctx.raw!==1?'s nesta hora':'')
+                  :ctx.raw+' acumulada'+(ctx.raw!==1?'s':'')
+              }}},
             scales:{
               x:{ticks:{color:TXT(),font:{size:7},maxRotation:0},grid:{display:false}},
-              y:{ticks:{color:TXT(),font:{size:7},stepSize:1},grid:{color:GRID()},min:0,max:total||1}
+              y:{ticks:{color:TXT(),font:{size:7},stepSize:1},grid:{color:GRID()},min:0,max:total||1},
+              y2:{display:false,min:0,max:total||1}
             }}
         });
       },50);
