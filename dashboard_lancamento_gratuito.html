@@ -8,7 +8,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <style>
-:root{--bg:#f0f2f7;--surface:#fff;--surface2:#f7f8fc;--border:rgba(0,0,0,.07);--text:#0f1523;--muted:#6b7280;--muted2:#9ca3af;--accent:#e11d48;--sh:0 1px 4px rgba(0,0,0,.06);--r:12px;}
+:root{--bg:#f0f2f7;--surface:#fff;--surface2:#f7f8fc;--border:rgba(0,0,0,.07);--text:#0f1523;--muted:#6b7280;--muted2:#9ca3af;--accent:#e11d48;--sh:0 1px 4px rgba(0,0,0,.06);--r:12px;--hotmart:#ff6b00;}
+[data-theme="dark"]{--hotmart:#ff8c38;}
 [data-theme="dark"]{--bg:#0a0f1e;--surface:#111827;--surface2:#1a2236;--border:rgba(255,255,255,.08);--text:#f0f4ff;--muted:#8b95a9;--muted2:#5a6478;--sh:0 1px 4px rgba(0,0,0,.3);}
 [data-theme="dark"] .sb{background:#060b14;}
 [data-theme="dark"] .tc thead th{background:#1a2236;}
@@ -208,9 +209,14 @@ details.desk-only{display:block!important;}
     <div><div class="logo-name" id="sbNome">Dashboard</div><div class="logo-sub">Lançamento</div></div>
   </div>
   <nav class="sb-nav">
+    <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,.25);text-transform:uppercase;letter-spacing:1.5px;padding:6px 10px 4px">Captação</div>
     <button class="sb-item active" onclick="goPage('meta',this)"><span class="ico">🎯</span>Meta Ads</button>
     <button class="sb-item" onclick="goPage('diario',this)"><span class="ico">📈</span>Métricas Diárias</button>
     <button class="sb-item" id="sbPesquisa" onclick="goPage('pesquisa',this)"><span class="ico">🔍</span>Pesquisa</button>
+    <div id="sbVendasGroup" style="display:none">
+      <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,.25);text-transform:uppercase;letter-spacing:1.5px;padding:12px 10px 4px">Vendas</div>
+      <button class="sb-item" id="sbVendas" onclick="goPage('vendas',this)"><span class="ico">💰</span>Visão Geral</button>
+    </div>
   </nav>
   <div class="sb-lct"><div class="sb-lct-lbl">Lançamento</div><div class="sb-lct-val" id="sbLct">—</div></div>
   <div class="sb-footer"><span id="sbAtual">--/--/---- · via planilha</span></div>
@@ -324,6 +330,56 @@ details.desk-only{display:block!important;}
       <div class="pizza-grid" id="pizzaGrid"></div>
     </div>
 
+    <!-- VENDAS -->
+    <div class="page-section" id="page-vendas">
+      <div style="margin-bottom:16px">
+        <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700">Vendas</div>
+        <div style="font-size:12px;color:var(--muted)">Vendas aprovadas · período do lançamento</div>
+      </div>
+      <!-- KPIs -->
+      <div class="krow k4 mb14" id="vendasKpis"></div>
+      <!-- Gráfico diário -->
+      <div class="cc mb14">
+        <div class="cc-t" style="color:var(--hotmart)">Vendas por Dia</div>
+        <div class="cc-s">Quantidade de vendas (barras) · Receita bruta (linha)</div>
+        <div class="cw" style="height:210px"><canvas id="chVendasDia"></canvas></div>
+      </div>
+      <!-- Gráficos pizza: quente x frio e pagamentos -->
+      <div class="g2 mb14">
+        <div class="cc">
+          <div class="cc-t">Temperatura do Lead (Quente × Frio)</div>
+          <div class="cc-s">Por campanha de captação</div>
+          <div class="cw" style="height:180px"><canvas id="chVendasTemp"></canvas></div>
+        </div>
+        <div class="cc">
+          <div class="cc-t">Método de Pagamento</div>
+          <div class="cc-s">Quantidade de vendas por forma de pagamento</div>
+          <div class="cw" style="height:180px"><canvas id="chVendasPgto"></canvas></div>
+        </div>
+      </div>
+      <!-- Tabelas empilhadas -->
+      <div class="section">
+        <div class="sec-hd">Origem — Canal (SCK) · Último clique antes da compra</div>
+        <div class="tc" id="vendasSck"></div>
+      </div>
+      <div class="section">
+        <div class="sec-hd">Origem — Campanha (UTM) · Captação</div>
+        <div class="tc" id="vendasUtm"></div>
+      </div>
+      <div class="section">
+        <div class="sec-hd">Origem — Público (UTM) · Captação</div>
+        <div class="tc" id="vendasPublicos"></div>
+      </div>
+      <div class="section">
+        <div class="sec-hd">Origem — Criativo (UTM) · Captação</div>
+        <div class="tc" id="vendasCriativos"></div>
+      </div>
+      <div class="section">
+        <div class="sec-hd">SCK Detalhado · Último clique</div>
+        <div class="tc" id="vendasSckDetalhe"></div>
+      </div>
+    </div>
+
   </div>
 </main>
 </div>
@@ -340,6 +396,7 @@ const META_TABLES     = null;
 const DATA_GERACAO     = null;
 const META_BD     = null;
 const PESQUISA     = null;
+const HOTMART      = null;
 
 // ═══ CONFIG ═══
 const LANCAMENTO_COD='RDC01';
@@ -1276,7 +1333,138 @@ function buildPizzas(){
   });
 }
 
-// ═══ CONTROLES ═══
+// ═══ VENDAS ═══
+function renderVendas(){
+  if(!HOTMART) return;
+  const HM=HOTMART;
+  const fRec=v=>v==null?'—':'R$'+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const HL=getComputedStyle(document.documentElement).getPropertyValue('--hotmart').trim()||'#ff6b00';
+
+  // KPIs
+  const totVendas=HM.daily.vendas.reduce((a,b)=>a+b,0);
+  const totReceita=HM.daily.receita.reduce((a,b)=>a+b,0);
+  const ticket=totVendas>0?r2(totReceita/totVendas):null;
+  const roasGeral=HM.roas_geral;
+  const roacCor=roasGeral==null?'var(--muted)':roasGeral>=3?'#059669':roasGeral>=1?'#d97706':'#dc2626';
+  document.getElementById('vendasKpis').innerHTML=`
+    <div class="kpi" style="--kc:${HL}"><div class="kpi-lbl">Receita Bruta</div><div class="kpi-val" style="font-size:18px;color:${HL}">${fRec(totReceita)}</div><div class="kpi-sub">vendas aprovadas</div></div>
+    <div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Vendas</div><div class="kpi-val">${totVendas}</div><div class="kpi-sub">transações aprovadas</div></div>
+    <div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Ticket Médio</div><div class="kpi-val">${fRec(ticket)}</div><div class="kpi-sub">por venda</div></div>
+    <div class="kpi" style="--kc:${roacCor}"><div class="kpi-lbl">ROAS</div><div class="kpi-val" style="color:${roacCor}">${roasGeral!=null?roasGeral+'x':'—'}</div><div class="kpi-sub">receita / invest. total</div></div>`;
+
+  // Gráfico diário
+  dc('chVendasDia');
+  CH['chVendasDia']=new Chart(document.getElementById('chVendasDia'),{
+    data:{labels:HM.daily.days,datasets:[
+      {label:'Vendas',data:HM.daily.vendas,backgroundColor:HL+'bb',borderRadius:4,type:'bar',yAxisID:'y1',
+       datalabels:{display:ctx=>showLabels,color:HL,font:{size:labelSize,weight:'bold'},anchor:'end',align:'top',offset:2,clip:false}},
+      {label:'Receita',data:HM.daily.receita,borderColor:'#059669',backgroundColor:'transparent',tension:.3,pointRadius:3,borderWidth:2,type:'line',yAxisID:'y2',spanGaps:true,datalabels:{display:false}},
+    ]},
+    options:{...bo(),scales:{
+      x:{ticks:{color:TXT(),font:bf},grid:{color:GRID()}},
+      y:{ticks:{color:TXT(),font:bf},grid:{color:GRID()},min:0},
+      y1:{position:'right',ticks:{color:HL,font:bf},grid:{display:false},grace:'20%'},
+      y2:{position:'right',ticks:{color:'#059669',font:bf,callback:v=>'R$'+v.toLocaleString('pt-BR')},grid:{display:false},offset:true,min:0},
+    }}
+  });
+
+  // Função helper para tabela de vendas com investimento e ROAS
+  function isSem(n){return /^(sem |e-mail não encontrado)/i.test(n);}
+  function tblVendas(elId, data, colLbl){
+    if(!data?.length){document.getElementById(elId).innerHTML='<div style="padding:12px;color:var(--muted);font-size:12px">Sem dados</div>';return;}
+    const temInv=data.some(d=>d.inv>0);
+    const temLds=data.some(d=>d.lds>0);
+    const fR2=v=>v==null?'—':'R$'+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+    const roacCls=v=>v==null?'cn':v>=3?'cg':v>=1?'cw2':'cr';
+    const cplCls2=v=>v==null?'cn':v<=CPL_BOM?'cg':v<=CPL_MEDIO?'cw2':'cr';
+    const main=data.filter(d=>!isSem(d.n));
+    const outros=data.filter(d=>isSem(d.n));
+    function rowHtml(d,dim){
+      let cells='<td style="font-size:'+(dim?'10px':'11px')+';padding:'+(dim?'3px 10px':'6px 10px')+';font-weight:'+(dim?'400':'600')+';color:'+(dim?'var(--muted2)':'var(--text)')+';max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+d.n+'">'+d.n+'</td>';
+      cells+='<td class="num" style="font-size:'+(dim?'10px':'11px')+';padding:'+(dim?'3px 10px':'6px 10px')+';color:'+(dim?'var(--muted2)':'')+'">'+d.v+'</td>';
+      cells+='<td class="num" style="font-size:'+(dim?'10px':'11px')+';padding:'+(dim?'3px 10px':'6px 10px')+';color:'+(dim?'var(--muted2)':HL)+';font-weight:'+(dim?'400':'700')+'">'+fR2(d.r)+'</td>';
+      if(temInv){
+        if(dim){
+          cells+='<td></td>';
+          if(temLds) cells+='<td></td><td></td>';
+          cells+='<td></td>';
+        } else {
+          cells+='<td class="num" style="font-size:11px;padding:6px 10px;color:var(--muted2)">'+( d.inv>0?fR2(d.inv):'—')+'</td>';
+          if(temLds){
+            cells+='<td class="num" style="font-size:11px;padding:6px 10px;font-weight:600">'+(d.lds>0?d.lds:'—')+'</td>';
+            cells+='<td class="num '+cplCls2(d.cpl)+'" style="font-size:11px;padding:6px 10px;font-weight:700">'+(d.cpl!=null?fR2(d.cpl):'—')+'</td>';
+          }
+          cells+='<td class="num '+roacCls(d.roas)+'" style="font-size:11px;padding:6px 10px;font-weight:700">'+(d.roas!=null?d.roas+'x':'—')+'</td>';
+        }
+      }
+      return '<tr>'+cells+'</tr>';
+    }
+    let thead='<thead><tr style="background:var(--surface2)"><th style="font-size:9px;padding:6px 10px;text-align:left;color:var(--muted);text-transform:uppercase">'+colLbl+'</th><th class="num" style="font-size:9px;padding:6px 10px;color:var(--muted);text-transform:uppercase">Vendas</th><th class="num" style="font-size:9px;padding:6px 10px;color:var(--muted);text-transform:uppercase">Receita</th>';
+    if(temInv) thead+='<th class="num" style="font-size:9px;padding:6px 10px;color:var(--muted);text-transform:uppercase">Invest.</th>';
+    if(temInv&&temLds) thead+='<th class="num" style="font-size:9px;padding:6px 10px;color:var(--muted);text-transform:uppercase">Leads</th><th class="num" style="font-size:9px;padding:6px 10px;color:var(--muted);text-transform:uppercase">CPL</th>';
+    if(temInv) thead+='<th class="num" style="font-size:9px;padding:6px 10px;color:var(--muted);text-transform:uppercase">ROAS</th>';
+    thead+='</tr></thead>';
+    let tbody=main.map(d=>rowHtml(d,false)).join('');
+    if(outros.length) tbody+='<tr><td colspan="99" style="padding:4px 0"><div style="border-top:1px dashed var(--border);margin:0 10px"></div></td></tr>'+outros.map(d=>rowHtml(d,true)).join('');
+    document.getElementById(elId).innerHTML='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:300px">'+thead+'<tbody>'+tbody+'</tbody></table></div>';
+  }
+
+  // Gráfico quente x frio
+  dc('chVendasTemp');
+  const TEMP_COLS={'Quente':'#ea580c','Frio':'#fdba74','Sem rastreio':null};
+  CH['chVendasTemp']=new Chart(document.getElementById('chVendasTemp'),{type:'doughnut',
+    data:{labels:HM.temperatura.filter(t=>t.n!=='Sem rastreio').map(t=>t.n),datasets:[{
+      data:HM.temperatura.filter(t=>t.n!=='Sem rastreio').map(t=>t.v),
+      backgroundColor:HM.temperatura.filter(t=>t.n!=='Sem rastreio').map(t=>TEMP_COLS[t.n]||'#6b7280'),
+      borderWidth:0
+    }]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{
+      legend:{position:'right',labels:{color:TXT(),font:bf,padding:10}},
+      tooltip:{callbacks:{label:ctx=>{const arr=HM.temperatura.filter(t=>t.n!=='Sem rastreio');const t=arr[ctx.dataIndex];return ` ${t.v} vendas · ${fRec(t.r)}`}}},
+      datalabels:{display:true,color:'#fff',font:{size:10,weight:'bold'},
+        formatter:(v,ctx)=>{const tot=ctx.dataset.data.reduce((a,b)=>a+b,0);return tot>0?(v/tot*100).toFixed(0)+'%':null;}}
+    }}
+  });
+
+  // Gráfico pagamentos
+  dc('chVendasPgto');
+  const PGTO_COLS=['#ea580c','#fdba74'];
+  CH['chVendasPgto']=new Chart(document.getElementById('chVendasPgto'),{type:'doughnut',
+    data:{labels:HM.pagamentos.map(p=>p.n),datasets:[{
+      data:HM.pagamentos.map(p=>p.v),
+      backgroundColor:PGTO_COLS.slice(0,HM.pagamentos.length),
+      borderWidth:0
+    }]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{
+      legend:{position:'right',labels:{color:TXT(),font:bf,padding:10}},
+      tooltip:{callbacks:{label:ctx=>{const p=HM.pagamentos[ctx.dataIndex];return ` ${p.v} vendas · ${fRec(p.r)}`}}},
+      datalabels:{display:true,color:'#fff',font:{size:10,weight:'bold'},
+        formatter:(v,ctx)=>{const tot=ctx.dataset.data.reduce((a,b)=>a+b,0);return tot>0?(v/tot*100).toFixed(0)+'%':null;}}
+    }}
+  });
+
+  tblVendas('vendasSck', HM.canal, 'Canal');
+  tblVendas('vendasUtm', HM.utm_camp, 'Campanha');
+  tblVendas('vendasPublicos', HM.publicos, 'Público');
+  tblVendas('vendasCriativos', HM.criativos, 'Criativo');
+
+  // SCK detalhado
+  const sckDEl=document.getElementById('vendasSckDetalhe');
+  sckDEl.innerHTML=`<table style="width:100%;border-collapse:collapse">
+    <thead><tr style="background:var(--surface2)">
+      <th style="font-size:9px;padding:6px 10px;text-align:left;color:var(--muted);text-transform:uppercase">SCK Completo</th>
+      <th class="num" style="font-size:9px;padding:6px 10px;color:var(--muted);text-transform:uppercase">Vendas</th>
+      <th class="num" style="font-size:9px;padding:6px 10px;color:var(--muted);text-transform:uppercase">Receita</th>
+    </tr></thead>
+    <tbody>${HM.sck.map(s=>`<tr>
+      <td style="font-size:10px;padding:6px 10px;max-width:350px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${s.n}">${s.n}</td>
+      <td class="num" style="font-size:11px;padding:6px 10px">${s.v}</td>
+      <td class="num" style="font-size:11px;padding:6px 10px;color:${HL};font-weight:700">${fRec(s.r)}</td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+
 function setPeriod(days,btn){
   periodDays=days; dateI=null; dateF=null;
   document.getElementById('dtI').value=''; document.getElementById('dtF').value='';
@@ -1330,6 +1518,7 @@ function rerenderActive(){
   if(p==='meta')     renderMeta();
   if(p==='diario')   renderDiario();
   if(p==='pesquisa') renderPesquisa();
+  if(p==='vendas')   renderVendas();
   setTimeout(()=>{Object.values({...CH,...PC}).forEach(c=>{try{c.resize();}catch(e){}});},60);
 }
 
@@ -1339,11 +1528,12 @@ function goPage(p,btn){
   document.querySelectorAll('.sb-item').forEach(e=>e.classList.remove('active'));
   document.getElementById('page-'+p).classList.add('active');
   if(btn) btn.classList.add('active');
-  const titles={meta:'Meta Ads',diario:'Métricas Diárias',pesquisa:'Pesquisa'};
+  const titles={meta:'Meta Ads',diario:'Métricas Diárias',pesquisa:'Pesquisa',vendas:'Vendas'};
   document.getElementById('pageTitle').textContent=titles[p]||p;
   if(p==='meta')     renderMeta();
   if(p==='diario')   renderDiario();
   if(p==='pesquisa') renderPesquisa();
+  if(p==='vendas')   renderVendas();
   setTimeout(()=>{Object.values({...CH,...PC}).forEach(c=>{try{c.resize();}catch(e){}});},80);
   if(window.innerWidth<=768) closeSb();
 }
@@ -1403,6 +1593,9 @@ window.addEventListener('resize', ajustarPaddingContent);
     const pgP=document.getElementById('page-pesquisa');
     if(pgP) pgP.style.display='none';
   }
+  // Vendas: mostrar menu só se HOTMART tiver dados
+  const sbVG=document.getElementById('sbVendasGroup');
+  if(sbVG) sbVG.style.display=(HOTMART&&HOTMART!==false)?'block':'none';
   renderMeta();
   ajustarPaddingContent();
 })();
