@@ -325,7 +325,7 @@ def hotmart_data():
         })
         df["date"]=pd.to_datetime(df["date"],errors="coerce")
         df["price"]=to_num(df["price"])
-        df=df[df["status"]=="APPROVED"].dropna(subset=["date"])
+        df=df[df["status"].isin(["APPROVED","COMPLETE"])].dropna(subset=["date"])
         print(f"     {len(df)} vendas aprovadas | R${df['price'].sum():,.2f}")
 
         # Investimento Meta (só LANCAMENTO_COD)
