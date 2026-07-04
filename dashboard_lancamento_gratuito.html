@@ -207,27 +207,27 @@ details.desk-only{display:block!important;}
 }
 
 /* ═══ COMPARAÇÃO LP + CTV ═══ */
-.cmp-section-ttl{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.cmp-section-ttl{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
 .cmp-section-ico{font-size:18px;}
 .cmp-hero{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
 .cmp-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;box-shadow:var(--sh);}
-.cmp-badge{display:inline-flex;align-items:center;gap:6px;padding:3px 12px;border-radius:20px;font-family:'Syne',sans-serif;font-size:12px;font-weight:800;letter-spacing:.5px;margin-bottom:10px;}
+.cmp-badge{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:20px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:.3px;margin-bottom:10px;}
 .cmp-kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;}
 .cmp-kpi{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:9px 12px;}
 .cmp-kpi-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:600;margin-bottom:3px;}
-.cmp-kpi-val{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;line-height:1.1;}
+.cmp-kpi-val{font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;line-height:1.2;}
 .cmp-kpi-sub{font-size:9px;color:var(--muted2);margin-top:2px;}
 .cmp-chart-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
 .cmp-table{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;overflow-x:auto;box-shadow:var(--sh);margin-bottom:0;}
-.cmp-table table{width:100%;border-collapse:collapse;min-width:300px;}
-.cmp-table thead th{font-size:9px;text-transform:uppercase;letter-spacing:.8px;font-weight:700;padding:8px 10px;text-align:right;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--surface2);}
+.cmp-table table{width:100%;border-collapse:collapse;}
+.cmp-table thead th{font-size:8px;text-transform:uppercase;letter-spacing:.5px;font-weight:700;padding:6px 7px;text-align:right;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--surface2);}
 .cmp-table thead th:first-child{text-align:left;color:var(--muted);}
-.cmp-table tbody td{padding:7px 10px;font-size:11px;border-bottom:1px solid var(--border);text-align:right;font-family:'DM Mono',monospace;white-space:nowrap;}
-.cmp-table tbody td:first-child{text-align:left;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;color:var(--muted);}
+.cmp-table tbody td{padding:5px 7px;font-size:10px;border-bottom:1px solid var(--border);text-align:right;font-family:'DM Mono',monospace;white-space:nowrap;}
+.cmp-table tbody td:first-child{text-align:left;font-family:'DM Sans',sans-serif;font-size:9px;font-weight:600;color:var(--muted);overflow:hidden;text-overflow:ellipsis;max-width:130px;}
 .cmp-table tbody tr:last-child td{border-bottom:none;}
 .cmp-table tbody tr:hover td{background:var(--surface2);}
 .cmp-winner{font-size:9px;font-weight:800;padding:1px 5px;border-radius:8px;background:#05966920;color:#059669;margin-left:3px;vertical-align:middle;}
-.cmp-camp-ttl{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;margin-bottom:7px;display:flex;align-items:center;gap:7px;}
+.cmp-camp-ttl{font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;margin-bottom:7px;display:flex;align-items:center;gap:7px;}
 @media(max-width:900px){.cmp-chart-row{grid-template-columns:1fr 1fr;}}
 @media(max-width:600px){.cmp-hero{grid-template-columns:1fr;}.cmp-chart-row{grid-template-columns:1fr 1fr;}.cmp-kpis{grid-template-columns:1fr 1fr;}}
 
@@ -411,13 +411,13 @@ details.desk-only{display:block!important;}
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
-        <div>
+        <div style="min-width:0;overflow:hidden;">
           <div class="cmp-camp-ttl"><span class="cmp-badge" style="background:#0f4c8a18;color:#0f4c8a;border:1px solid #0f4c8a44;margin-bottom:0">LPV01</span> Campanhas</div>
           <div class="cmp-table"><table><thead><tr><th style="text-align:left">Campanha</th><th>Invest.</th><th>Impr.</th><th>CTR</th><th>PV</th><th>C.Rate</th><th>Leads</th><th>CPL</th><th>Tx.Conv</th></tr></thead><tbody><tr><td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px" title="SOBE-RDC03-LPV01-FRIO-CAPTACAO-VD">SOBE-RDC03-LPV01-FRIO-CAPTACAO-VD</td><td>R$231,58</td><td>8.782</td><td>3,11%</td><td>199</td><td>72,89%</td><td>85</td><td class="cg">R$2,72</td><td>42,71%</td></tr>
 <tr><td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px" title="SOBE-RDC03-LPV01-QUENTE-CAPTACAO-VD">SOBE-RDC03-LPV01-QUENTE-CAPTACAO-VD</td><td>R$135,33</td><td>4.970</td><td>3,60%</td><td>134</td><td>74,86%</td><td>60</td><td class="cg">R$2,26</td><td>44,78%</td></tr>
 </tbody></table></div>
         </div>
-        <div>
+        <div style="min-width:0;overflow:hidden;">
           <div class="cmp-camp-ttl"><span class="cmp-badge" style="background:#1e88e518;color:#1e88e5;border:1px solid #1e88e544;margin-bottom:0">LPV02</span> Campanhas</div>
           <div class="cmp-table"><table><thead><tr><th style="text-align:left">Campanha</th><th>Invest.</th><th>Impr.</th><th>CTR</th><th>PV</th><th>C.Rate</th><th>Leads</th><th>CPL</th><th>Tx.Conv</th></tr></thead><tbody><tr><td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px" title="SOBE-RDC03-LPV02-QUENTE-CAPTACAO-VD">SOBE-RDC03-LPV02-QUENTE-CAPTACAO-VD</td><td>R$120,78</td><td>5.089</td><td>4,01%</td><td>172</td><td>84,31%</td><td>91</td><td class="cg">R$1,33</td><td>52,91%</td></tr>
 <tr><td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px" title="SOBE-RDC03-LPV02-FRIO-CAPTACAO-VD">SOBE-RDC03-LPV02-FRIO-CAPTACAO-VD</td><td>R$112,18</td><td>4.177</td><td>3,14%</td><td>92</td><td>70,23%</td><td>38</td><td class="cg">R$2,95</td><td>41,30%</td></tr>
@@ -499,7 +499,7 @@ details.desk-only{display:block!important;}
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
-        <div>
+        <div style="min-width:0;overflow:hidden;">
           <div class="cmp-camp-ttl"><span class="cmp-badge" style="background:#37415118;color:#374151;border:1px solid #37415144;margin-bottom:0">🖼️ IMG</span> Campanhas</div>
           <div class="cmp-table"><div style="padding:24px;text-align:center;color:var(--muted);font-size:12px;">
             <div style="font-size:24px;margin-bottom:8px">🖼️</div>
@@ -507,7 +507,7 @@ details.desk-only{display:block!important;}
             <div style="font-size:11px">As campanhas IMG foram ativadas recentemente. Os dados aparecerão aqui assim que houver veiculação.</div>
           </div></div>
         </div>
-        <div>
+        <div style="min-width:0;overflow:hidden;">
           <div class="cmp-camp-ttl"><span class="cmp-badge" style="background:#0284c718;color:#0284c7;border:1px solid #0284c744;margin-bottom:0">🎬 VD</span> Campanhas</div>
           <div class="cmp-table"><table><thead><tr><th style="text-align:left">Campanha</th><th>Invest.</th><th>Impr.</th><th>CTR</th><th>PV</th><th>C.Rate</th><th>Leads</th><th>CPL</th><th>Tx.Conv</th></tr></thead><tbody><tr><td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px" title="SOBE-RDC03-LPV02-QUENTE-CAPTACAO-VD">SOBE-RDC03-LPV02-QUENTE-CAPTACAO-VD</td><td>R$120,78</td><td>5.089</td><td>4,01%</td><td>172</td><td>84,31%</td><td>91</td><td class="cg">R$1,33</td><td>52,91%</td></tr>
 <tr><td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px" title="SOBE-RDC03-LPV01-FRIO-CAPTACAO-VD">SOBE-RDC03-LPV01-FRIO-CAPTACAO-VD</td><td>R$231,58</td><td>8.782</td><td>3,11%</td><td>199</td><td>72,89%</td><td>85</td><td class="cg">R$2,72</td><td>42,71%</td></tr>
