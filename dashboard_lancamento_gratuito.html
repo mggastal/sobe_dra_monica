@@ -1308,13 +1308,6 @@ function renderDiarioCharts(){
       : (val>=m.bom?'#059669':val>=m.medio?'#d97706':'#dc2626');
   }
 
-  const METRICS=[
-    {id:'ctr',  ttl:'CTR (%)',          suffix:'%', data:()=>md.ctr},
-    {id:'cpm',  ttl:'CPM (R$)',         suffix:'',  fmt:v=>v!=null?'R$'+v.toFixed(2):null, data:()=>md.cpm},
-    {id:'cpl',  ttl:'Custo por Lead (R$)', suffix:'', fmt:v=>v!=null?'R$'+v.toFixed(2):null, data:()=>md.cpl},
-    {id:'cr',   ttl:'Connect Rate (%)', suffix:'%', data:()=>md.connect_rate},
-    {id:'tx_cv',ttl:'Taxa Conversão (%)',suffix:'%', data:()=>md.tx_conv},
-  ];
 
   const el=document.getElementById('dailyCharts');
   el.innerHTML=METRICS.map(m=>{
@@ -1753,8 +1746,8 @@ function renderComp(){
   }
   const W='<span class="cmp-winner">✓</span>';
 
-  const METRICS=[
-    ['Investimento',         'spend',   v=>fR(v),  false],
+  const CMP_METRICS=[
+    ['Investimento',         'spend',   v=>fR(v),  false, true],
     ['Impressões',           'imp',     v=>fN(v),  true],
     ['CPM',                  'cpm',     v=>fR(v),  false],
     ['Cliques no Link',      'lc',      v=>fN(v),  true],
@@ -1794,9 +1787,17 @@ function renderComp(){
   }
 
 
+  const METRICS=[
+    {id:'ctr',  ttl:'CTR (%)',          suffix:'%', data:()=>md.ctr},
+    {id:'cpm',  ttl:'CPM (R$)',         suffix:'',  fmt:v=>v!=null?'R$'+v.toFixed(2):null, data:()=>md.cpm},
+    {id:'cpl',  ttl:'Custo por Lead (R$)', suffix:'', fmt:v=>v!=null?'R$'+v.toFixed(2):null, data:()=>md.cpl},
+    {id:'cr',   ttl:'Connect Rate (%)', suffix:'%', data:()=>md.connect_rate},
+    {id:'tx_cv',ttl:'Taxa Conversão (%)',suffix:'%', data:()=>md.tx_conv},
+  ];
+
   function cmpTable(t1,t2,c1,c2,lbl1,lbl2,elId){
-    const rows=METRICS.map(([lbl,key,fmt,hib])=>{
-      const v1=t1[key],v2=t2[key],w=win(v1,v2,hib);
+    const rows=CMP_METRICS.map(([lbl,key,fmt,hib,skip=false])=>{
+      const v1=t1[key],v2=t2[key],w=skip?0:win(v1,v2,hib);
       const cc1=key==='cpl'?cplCls2(v1):'', cc2=key==='cpl'?cplCls2(v2):'';
       const wrap=(v,w,fmt)=>w?`<span style="background:#05966920;color:#059669;border:1px solid #05966940;border-radius:6px;padding:2px 8px;font-weight:700">${fmt(v)}</span>`:fmt(v);
       return `<tr>
