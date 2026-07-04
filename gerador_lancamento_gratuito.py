@@ -501,109 +501,104 @@ def replace_js_const(html, name, value):
     return html
 
 
-# ══ COMPARAÇÃO LP + CTV ════════════════════════════════
-# Padrões esperados na nomenclatura das campanhas:
-#   LPV01 / LPV02  → versões de landing page
-#   IMG / VD       → tipo de criativo (imagem / vídeo)
-# Filtro: campanhas que contenham LANCAMENTO_COD (se definido)
-
+# ══ COMPARAÇÃO LP + CTV ════════════════════════════════════
 def build_comp_data(df):
-    """Agrega dados por LPV (01/02) e CTV (IMG/VD) com diários e totais."""
+    """Agrega métricas por LPV01/LPV02 e IMG/VD para aba de comparação."""
     from collections import defaultdict
 
-    # Quais campanhas incluir
-    if LANCAMENTO_COD:
-        df = df[df["campaign"].str.contains(LANCAMENTO_COD, na=False)]
+    sub = df[df["campaign"].str.contains(LANCAMENTO_COD, na=False)] if LANCAMENTO_COD else df
 
-    lpv_daily = {k: defaultdict(lambda: defaultdict(float)) for k in ["LPV01","LPV02"]}
-    ctv_daily = {k: defaultdict(lambda: defaultdict(float)) for k in ["IMG","VD"]}
+    lpv_d  = {"LPV01": defaultdict(lambda: defaultdict(float)),
+               "LPV02": defaultdict(lambda: defaultdict(float))}
+    ctv_d  = {"IMG":   defaultdict(lambda: defaultdict(float)),
+               "VD":    defaultdict(lambda: defaultdict(float))}
     lpv_camps = defaultdict(lambda: defaultdict(float))
     ctv_camps = defaultdict(lambda: defaultdict(float))
     camp_tags = {}
-
     all_days_set = set()
 
-    for _, row in df.iterrows():
-        camp = str(row.get("campaign",""))
-        d    = row["date"].strftime("%d/%m") if hasattr(row["date"],"strftime") else str(row["date"])
-        sp   = float(row.get("spend",0) or 0)
-        imp  = float(row.get("impressions",0) or 0)
-        lc   = float(row.get("link_clicks",0) or 0)
-        pv   = float(row.get("page_view",0) or 0)
-        ld   = float(row.get("leads",0) or 0)
+    for _, row in sub.iterrows():
+        camp = str(row.get("campaign", ""))
+        d    = row["date"].strftime("%d/%m")
+        sp   = float(row.get("spend",       0) or 0)
+        imp  = float(row.get("impressions", 0) or 0)
+        lc   = float(row.get("link_clicks", 0) or 0)
+        pv   = float(row.get("page_view",   0) or 0)
+        ld   = float(row.get("leads",       0) or 0)
 
         lpv = "LPV01" if "LPV01" in camp else ("LPV02" if "LPV02" in camp else None)
         ctv = "IMG"   if "IMG"   in camp else ("VD"    if "VD"    in camp else None)
-        camp_tags[camp] = {"lpv":lpv,"ctv":ctv}
+        camp_tags[camp] = {"lpv": lpv, "ctv": ctv}
         all_days_set.add(d)
 
-        for agg, key in [(lpv_daily, lpv), (ctv_daily, ctv)]:
-            if key:
-                for k,v in [("spend",sp),("imp",imp),("lc",lc),("pv",pv),("leads",ld)]:
-                    agg[key][d][k] += v
-
         if lpv:
-            for k,v in [("spend",sp),("imp",imp),("lc",lc),("pv",pv),("leads",ld)]:
-                lpv_camps[camp][k] += v
+            for k, v in [("sp",sp),("imp",imp),("lc",lc),("pv",pv),("ld",ld)]:
+                lpv_d[lpv][d][k]    += v
+                lpv_camps[camp][k]  += v
         if ctv:
-            for k,v in [("spend",sp),("imp",imp),("lc",lc),("pv",pv),("leads",ld)]:
-                ctv_camps[camp][k] += v
+            for k, v in [("sp",sp),("imp",imp),("lc",lc),("pv",pv),("ld",ld)]:
+                ctv_d[ctv][d][k]    += v
+                ctv_camps[camp][k]  += v
 
-    def day_sort_key(s):
-        dd,mm=s.split("/"); return int(mm)*100+int(dd)
-    all_days = sorted(all_days_set, key=day_sort_key)
+    def day_key(s):
+        dd, mm = s.split("/"); return int(mm)*100 + int(dd)
+    days = sorted(all_days_set, key=day_key)
 
-    def metrics(v):
-        sp=round(float(v.get("spend",0)),2); imp=int(v.get("imp",0))
-        lc=int(v.get("lc",0)); pv=int(v.get("pv",0)); ld=int(v.get("leads",0))
+    def metrics(agg):
+        sp=round(float(agg.get("sp", agg.get("spend",0))),2)
+        imp=int(agg.get("imp",0)); lc=int(agg.get("lc",0))
+        pv=int(agg.get("pv",0));   ld=int(agg.get("ld", agg.get("leads",0)))
         return {"spend":sp,"imp":imp,"lc":lc,"pv":pv,"leads":ld,
                 "cpm":  round(sp/imp*1000,2) if imp>0 else None,
                 "ctr":  round(lc/imp*100,2)  if imp>0 else None,
                 "cr":   round(pv/lc*100,2)   if lc>0  else None,
                 "cpl":  round(sp/ld,2)        if ld>0  else None,
-                "tx_conv": round(ld/pv*100,2) if pv>0  else None}
+                "tx_conv":round(ld/pv*100,2)  if pv>0  else None}
 
-    def build_daily(daily_dict):
-        out={"days":all_days,"spend":[],"imp":[],"lc":[],"pv":[],"leads":[],"cpl":[],"cr":[],"tx_conv":[]}
-        for d in all_days:
-            v=daily_dict[d]
-            sp=round(float(v.get("spend",0)),2); imp=int(v.get("imp",0))
-            lc=int(v.get("lc",0)); pv=int(v.get("pv",0)); ld=int(v.get("leads",0))
-            out["spend"].append(sp); out["imp"].append(imp); out["lc"].append(lc)
-            out["pv"].append(pv);   out["leads"].append(ld)
+    def build_daily(d_dict):
+        out={"days":days,"spend":[],"imp":[],"lc":[],"pv":[],"leads":[],"cpl":[],"cr":[],"tx_conv":[]}
+        for d in days:
+            v=d_dict[d]; sp=round(float(v.get("sp",0)),2)
+            imp=int(v.get("imp",0)); lc=int(v.get("lc",0))
+            pv=int(v.get("pv",0));   ld=int(v.get("ld",0))
+            out["spend"].append(sp);  out["imp"].append(imp)
+            out["lc"].append(lc);     out["pv"].append(pv); out["leads"].append(ld)
             out["cpl"].append(round(sp/ld,2) if ld>0 else None)
             out["cr"].append(round(pv/lc*100,2) if lc>0 else None)
             out["tx_conv"].append(round(ld/pv*100,2) if pv>0 else None)
         return out
 
-    def total_for(daily_dict, key):
-        return {k: sum(daily_dict[key][d][k] for d in all_days) for k in ["spend","imp","lc","pv","leads"]}
+    def totals(d_dict):
+        t = defaultdict(float)
+        for d in days:
+            for k, v in d_dict[d].items(): t[k] += v
+        return t
 
     def camp_list(camps_dict, filter_fn):
-        result=[]
-        for c,v in sorted(camps_dict.items(), key=lambda x:-x[1].get("leads",0)):
+        result = []
+        for c, v in sorted(camps_dict.items(), key=lambda x: -x[1].get("ld",0)):
             if not filter_fn(c): continue
-            m=metrics(v); m["n"]=c; result.append(m)
+            m = metrics(v); m["n"] = c; result.append(m)
         return result
 
     return {
         "LPV": {
-            "LPV01": {"totals": metrics(total_for(lpv_daily,"LPV01")),
-                      "daily":  build_daily(lpv_daily["LPV01"]),
-                      "camps":  camp_list(lpv_camps, lambda c:"LPV01" in c)},
-            "LPV02": {"totals": metrics(total_for(lpv_daily,"LPV02")),
-                      "daily":  build_daily(lpv_daily["LPV02"]),
-                      "camps":  camp_list(lpv_camps, lambda c:"LPV02" in c)},
-            "days": all_days,
+            "LPV01": {"totals": metrics(totals(lpv_d["LPV01"])),
+                      "daily":  build_daily(lpv_d["LPV01"]),
+                      "camps":  camp_list(lpv_camps, lambda c: "LPV01" in c)},
+            "LPV02": {"totals": metrics(totals(lpv_d["LPV02"])),
+                      "daily":  build_daily(lpv_d["LPV02"]),
+                      "camps":  camp_list(lpv_camps, lambda c: "LPV02" in c)},
+            "days": days,
         },
         "CTV": {
-            "IMG": {"totals": metrics(total_for(ctv_daily,"IMG")),
-                    "daily":  build_daily(ctv_daily["IMG"]),
-                    "camps":  camp_list(ctv_camps, lambda c:"IMG" in c)},
-            "VD":  {"totals": metrics(total_for(ctv_daily,"VD")),
-                    "daily":  build_daily(ctv_daily["VD"]),
-                    "camps":  camp_list(ctv_camps, lambda c:"VD" in c and "IMG" not in c)},
-            "days": all_days,
+            "IMG": {"totals": metrics(totals(ctv_d["IMG"])),
+                    "daily":  build_daily(ctv_d["IMG"]),
+                    "camps":  camp_list(ctv_camps, lambda c: "IMG" in c)},
+            "VD":  {"totals": metrics(totals(ctv_d["VD"])),
+                    "daily":  build_daily(ctv_d["VD"]),
+                    "camps":  camp_list(ctv_camps, lambda c: "VD" in c and "IMG" not in c)},
+            "days": days,
         },
     }
 
@@ -616,9 +611,9 @@ def inject_all(tpl, meta_k, meta_d, meta_dc, meta_raw_c, meta_t, meta_bd, pes, h
     html=replace_js_const(html,"META_TABLES",    meta_t)
     html=replace_js_const(html,"META_BD",        meta_bd)
     html=replace_js_const(html,"PESQUISA", pes if USAR_PESQUISA else False)
+    html=replace_js_const(html,"HOTMART", hotmart if USAR_VENDAS else False)
     if comp_data is not None:
         html=replace_js_const(html,"COMP_DATA", comp_data)
-    html=replace_js_const(html,"HOTMART", hotmart if USAR_VENDAS else False)
     html=replace_js_const(html,"DATA_GERACAO", date.today().strftime("%Y-%m-%d"))
     # Suporte a CPL_BOM ou CPA_BOM (retrocompatibilidade)
     _cpl_bom   = globals().get("CPL_BOM",   globals().get("CPA_BOM",   5.0))
@@ -670,20 +665,20 @@ def main():
 
     print("\n[COMPARAÇÃO LP + CTV]")
     try:
-        comp = build_comp_data(df_meta)
-        lpv1=comp["LPV"]["LPV01"]["totals"]; lpv2=comp["LPV"]["LPV02"]["totals"]
-        print(f"  LPV01: {lpv1['leads']} leads | CPL R${lpv1['cpl']} | spend R${lpv1['spend']:.2f}")
-        print(f"  LPV02: {lpv2['leads']} leads | CPL R${lpv2['cpl']} | spend R${lpv2['spend']:.2f}")
-        vd=comp["CTV"]["VD"]["totals"]; img=comp["CTV"]["IMG"]["totals"]
-        print(f"  VD:  {vd['leads']} leads | CPL R${vd['cpl']} | spend R${vd['spend']:.2f}")
-        print(f"  IMG: {img['leads']} leads | {'sem dados ainda' if not img['leads'] else f'CPL R${img[chr(99)+chr(112)+chr(108)]}'}")
+        comp_data = build_comp_data(df_meta)
+        l1=comp_data["LPV"]["LPV01"]["totals"]; l2=comp_data["LPV"]["LPV02"]["totals"]
+        img=comp_data["CTV"]["IMG"]["totals"];   vd=comp_data["CTV"]["VD"]["totals"]
+        print(f"  LPV01: {l1['leads']} leads | R${l1['cpl']} CPL")
+        print(f"  LPV02: {l2['leads']} leads | R${l2['cpl']} CPL")
+        print(f"  IMG:   {img['leads']} leads | {'sem dados' if not img['leads'] else f'R${img[chr(99)+chr(112)+chr(108)]} CPL'}")
+        print(f"  VD:    {vd['leads']} leads | R${vd['cpl']} CPL")
     except Exception as e:
-        print(f"  ⚠ Aviso comp: {e}"); comp=None
+        print(f"  ⚠ {e}"); comp_data = None
 
     print("\n[HTML]")
     if not Path(TEMPLATE_FILE).exists():
         print(f"  ERRO: {TEMPLATE_FILE} não encontrado"); return
-    html=inject_all(TEMPLATE_FILE,m_k,m_d,m_dc,m_raw,m_t,m_bd,pes,hotmart,comp)
+    html=inject_all(TEMPLATE_FILE,m_k,m_d,m_dc,m_raw,m_t,m_bd,pes,hotmart,comp_data)
     Path(OUTPUT_FILE).write_text(html,encoding="utf-8")
     print(f"  ✓ {OUTPUT_FILE} ({len(html)//1024}KB)")
 
