@@ -205,7 +205,6 @@ details.desk-only{display:block!important;}
   .seg-card{overflow-x:auto!important;}
   .daily-side{flex-direction:row;gap:12px;border-right:none;border-bottom:1px solid var(--border);}
 }
-
 /* ═══ COMPARAÇÃO LP + CTV ═══ */
 .cmp-section-ttl{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
 .cmp-section-ico{font-size:18px;}
@@ -335,13 +334,12 @@ details.desk-only{display:block!important;}
       </div>
     </div>
 
-
     <!-- COMPARAÇÃO LP e CTV -->
     <div class="page-section" id="page-comp">
 
       <!-- ═══ LPS ═══ -->
       <div class="cmp-section-ttl">
-        <span class="cmp-section-ico">🏁</span> Comparação de Landing Pages
+        Comparação de Landing Pages
       </div>
       <div class="cmp-hero">
         <div class="cmp-card">
@@ -429,7 +427,7 @@ details.desk-only{display:block!important;}
 
       <!-- ═══ CTVs ═══ -->
       <div class="cmp-section-ttl">
-        <span class="cmp-section-ico">🎨</span> Comparação de Criativos — Imagem vs Vídeo
+        Comparação de Criativos — Imagem vs Vídeo
       </div>
       <div class="cmp-hero">
         <div class="cmp-card">
@@ -519,7 +517,6 @@ details.desk-only{display:block!important;}
 
     </div>
     <!-- /COMPARAÇÃO LP e CTV -->
-
     <!-- MÉTRICAS DIÁRIAS -->
     <div class="page-section" id="page-diario">
       <details style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:0;margin-bottom:14px;box-shadow:var(--sh);" id="campFilterDetails">
@@ -654,6 +651,7 @@ const DATA_GERACAO     = null;
 const META_BD     = null;
 const PESQUISA     = null;
 const HOTMART      = null;
+const COMP_DATA    = null;
 
 // ═══ CONFIG ═══
 const LANCAMENTO_COD='RDC01';
@@ -1888,10 +1886,7 @@ function rerenderActive(){
 }
 
 // ═══ NAVEGAÇÃO ═══
-
 // ═══ COMPARAÇÃO LP + CTV ═══
-const COMP_DATA = {"LPV": {"LPV01": {"totals": {"spend": 366.91, "imp": 13752, "lc": 452, "pv": 333, "leads": 145, "cpm": 26.68, "ctr": 3.29, "cr": 73.67, "cpl": 2.53, "tx_conv": 43.54}, "daily": {"days": ["01/07", "02/07", "03/07"], "spend": [93.95, 166.78, 106.18], "imp": [3575, 5864, 4313], "lc": [78, 246, 128], "pv": [50, 186, 97], "leads": [13, 85, 47], "cpl": [7.23, 1.96, 2.26], "cr": [64.1, 75.61, 75.78], "tx_conv": [26.0, 45.7, 48.45]}, "camps": [{"n": "SOBE-RDC03-LPV01-FRIO-CAPTACAO-VD", "spend": 231.58, "imp": 8782, "lc": 273, "pv": 199, "leads": 85, "cpm": 26.37, "ctr": 3.11, "cr": 72.89, "cpl": 2.72, "tx_conv": 42.71}, {"n": "SOBE-RDC03-LPV01-QUENTE-CAPTACAO-VD", "spend": 135.33, "imp": 4970, "lc": 179, "pv": 134, "leads": 60, "cpm": 27.23, "ctr": 3.6, "cr": 74.86, "cpl": 2.26, "tx_conv": 44.78}]}, "LPV02": {"totals": {"spend": 232.96, "imp": 9266, "lc": 335, "pv": 264, "leads": 129, "cpm": 25.14, "ctr": 3.62, "cr": 78.81, "cpl": 1.81, "tx_conv": 48.86}, "daily": {"days": ["01/07", "02/07", "03/07"], "spend": [37.04, 119.63, 76.29], "imp": [1316, 4713, 3237], "lc": [46, 173, 116], "pv": [36, 135, 93], "leads": [16, 75, 38], "cpl": [2.31, 1.6, 2.01], "cr": [78.26, 78.03, 80.17], "tx_conv": [44.44, 55.56, 40.86]}, "camps": [{"n": "SOBE-RDC03-LPV02-QUENTE-CAPTACAO-VD", "spend": 120.78, "imp": 5089, "lc": 204, "pv": 172, "leads": 91, "cpm": 23.73, "ctr": 4.01, "cr": 84.31, "cpl": 1.33, "tx_conv": 52.91}, {"n": "SOBE-RDC03-LPV02-FRIO-CAPTACAO-VD", "spend": 112.18, "imp": 4177, "lc": 131, "pv": 92, "leads": 38, "cpm": 26.86, "ctr": 3.14, "cr": 70.23, "cpl": 2.95, "tx_conv": 41.3}]}, "days": ["01/07", "02/07", "03/07"]}, "CTV": {"IMG": {"totals": {"spend": 0.0, "imp": 0, "lc": 0, "pv": 0, "leads": 0, "cpm": null, "ctr": null, "cr": null, "cpl": null, "tx_conv": null}, "daily": {"days": ["01/07", "02/07", "03/07"], "spend": [0.0, 0.0, 0.0], "imp": [0, 0, 0], "lc": [0, 0, 0], "pv": [0, 0, 0], "leads": [0, 0, 0], "cpl": [null, null, null], "cr": [null, null, null], "tx_conv": [null, null, null]}, "camps": []}, "VD": {"totals": {"spend": 599.87, "imp": 23018, "lc": 787, "pv": 597, "leads": 274, "cpm": 26.06, "ctr": 3.42, "cr": 75.86, "cpl": 2.19, "tx_conv": 45.9}, "daily": {"days": ["01/07", "02/07", "03/07"], "spend": [130.99, 286.41, 182.47], "imp": [4891, 10577, 7550], "lc": [124, 419, 244], "pv": [86, 321, 190], "leads": [29, 160, 85], "cpl": [4.52, 1.79, 2.15], "cr": [69.35, 76.61, 77.87], "tx_conv": [33.72, 49.84, 44.74]}, "camps": [{"n": "SOBE-RDC03-LPV02-QUENTE-CAPTACAO-VD", "spend": 120.78, "imp": 5089, "lc": 204, "pv": 172, "leads": 91, "cpm": 23.73, "ctr": 4.01, "cr": 84.31, "cpl": 1.33, "tx_conv": 52.91}, {"n": "SOBE-RDC03-LPV01-FRIO-CAPTACAO-VD", "spend": 231.58, "imp": 8782, "lc": 273, "pv": 199, "leads": 85, "cpm": 26.37, "ctr": 3.11, "cr": 72.89, "cpl": 2.72, "tx_conv": 42.71}, {"n": "SOBE-RDC03-LPV01-QUENTE-CAPTACAO-VD", "spend": 135.33, "imp": 4970, "lc": 179, "pv": 134, "leads": 60, "cpm": 27.23, "ctr": 3.6, "cr": 74.86, "cpl": 2.26, "tx_conv": 44.78}, {"n": "SOBE-RDC03-LPV02-FRIO-CAPTACAO-VD", "spend": 112.18, "imp": 4177, "lc": 131, "pv": 92, "leads": 38, "cpm": 26.86, "ctr": 3.14, "cr": 70.23, "cpl": 2.95, "tx_conv": 41.3}]}, "days": ["01/07", "02/07", "03/07"]}};
-
 function renderComp(){
   if(!COMP_DATA) return;
   const lpv1=COMP_DATA.LPV.LPV01, lpv2=COMP_DATA.LPV.LPV02;
