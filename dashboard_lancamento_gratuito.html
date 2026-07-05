@@ -1309,6 +1309,14 @@ function renderDiarioCharts(){
   }
 
 
+    const METRICS=[
+    {id:'ctr',  ttl:'CTR (%)',          suffix:'%', data:()=>md.ctr},
+    {id:'cpm',  ttl:'CPM (R$)',         suffix:'',  fmt:v=>v!=null?'R$'+v.toFixed(2):null, data:()=>md.cpm},
+    {id:'cpl',  ttl:'Custo por Lead (R$)', suffix:'', fmt:v=>v!=null?'R$'+v.toFixed(2):null, data:()=>md.cpl},
+    {id:'cr',   ttl:'Connect Rate (%)', suffix:'%', data:()=>md.connect_rate},
+    {id:'tx_cv',ttl:'Taxa Conversão (%)',suffix:'%', data:()=>md.tx_conv},
+  ];
+
   const el=document.getElementById('dailyCharts');
   el.innerHTML=METRICS.map(m=>{
     const avgVal=METAS[m.id].avgVal;
@@ -1785,15 +1793,6 @@ function renderComp(){
       <span style="width:10px;height:10px;border-radius:2px;background:${c};display:inline-block"></span>${label}
     </div>`;
   }
-
-
-  const METRICS=[
-    {id:'ctr',  ttl:'CTR (%)',          suffix:'%', data:()=>md.ctr},
-    {id:'cpm',  ttl:'CPM (R$)',         suffix:'',  fmt:v=>v!=null?'R$'+v.toFixed(2):null, data:()=>md.cpm},
-    {id:'cpl',  ttl:'Custo por Lead (R$)', suffix:'', fmt:v=>v!=null?'R$'+v.toFixed(2):null, data:()=>md.cpl},
-    {id:'cr',   ttl:'Connect Rate (%)', suffix:'%', data:()=>md.connect_rate},
-    {id:'tx_cv',ttl:'Taxa Conversão (%)',suffix:'%', data:()=>md.tx_conv},
-  ];
 
   function cmpTable(t1,t2,c1,c2,lbl1,lbl2,elId){
     const rows=CMP_METRICS.map(([lbl,key,fmt,hib,skip=false])=>{
