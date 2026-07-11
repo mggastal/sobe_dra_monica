@@ -1393,7 +1393,7 @@ function buildUtmFilters(){
         const cnt=PESQUISA.rows.filter(r=>r[utm]===v).length;
         return `<label class="utm-item">
           <input type="checkbox" value="${v}" data-utm="${utm}" onchange="onPesCheck(this)" checked>
-          <span class="utm-item-lbl">${v}</span><span class="utm-item-cnt">${cnt}</span>
+          <span class="utm-item-lbl">${v==='(vazio)'?'(sem preenchimento)':v}</span><span class="utm-item-cnt">${cnt}</span>
         </label>`;
       }).join('')}</div>
     </div>`;
