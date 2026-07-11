@@ -458,16 +458,28 @@ def pesquisa_process(df, total_leads):
         if p not in df.columns: continue
         vc=df[p].value_counts(); total=vc.sum()
         graficos.append({"pergunta":p,"opcoes":[{"label":str(k),"qtd":int(v),"pct":round(v/total*100,1)} for k,v in vc.items()]})
-    filtros={}
-    for col in UTM_COLS:
-        if col in df.columns:
-            filtros[col]=sorted([v for v in df[col].dropna().unique().tolist() if v and str(v)!="nan"])
+    EMPTY_TOKEN="(vazio)"
+    # Normaliza UTMs: valor real (str) ou EMPTY_TOKEN quando ausente/vazio.
+    # Assim TODAS as respostas entram nos filtros e "tudo marcado" = 100% dos dados.
+    def _utm_val(r, col):
+        if col not in df.columns: return EMPTY_TOKEN
+        v = r.get(col)
+        if pd.isna(v): return EMPTY_TOKEN
+        s = str(v).strip()
+        return s if s and s.lower()!="nan" else EMPTY_TOKEN
     rows=[]
     for _,r in df.iterrows():
         row={}
         for p in PERGUNTAS: row[p]=str(r[p]) if p in df.columns and pd.notna(r.get(p)) else None
-        for col in UTM_COLS: row[col]=str(r[col]) if col in df.columns and pd.notna(r.get(col)) else None
+        for col in UTM_COLS: row[col]=_utm_val(r, col)
         rows.append(row)
+    # Filtros a partir dos valores efetivamente presentes nas rows (inclui EMPTY_TOKEN);
+    # ordena com valores reais primeiro e "(vazio)" por último.
+    filtros={}
+    for col in UTM_COLS:
+        vals=sorted(set(row[col] for row in rows if row.get(col) and row[col]!=EMPTY_TOKEN))
+        if any(row.get(col)==EMPTY_TOKEN for row in rows): vals=vals+[EMPTY_TOKEN]
+        if vals: filtros[col]=vals
     return {"total":len(df),"total_leads":int(total_leads),"graficos":graficos,"filtros":filtros,"rows":rows,"perguntas":PERGUNTAS}
 
 # ══ INJEÇÃO ════════════════════════════════════════════
