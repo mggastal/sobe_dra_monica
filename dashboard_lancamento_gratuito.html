@@ -230,6 +230,45 @@ details.desk-only{display:block!important;}
 @media(max-width:900px){.cmp-chart-row{grid-template-columns:1fr 1fr;}}
 @media(max-width:600px){.cmp-hero{grid-template-columns:1fr;}.cmp-chart-row{grid-template-columns:1fr 1fr;}.cmp-kpis{grid-template-columns:1fr 1fr;}}
 
+
+/* ═══ MODAL DRILL-DOWN PESQUISA ═══ */
+.dm-overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);backdrop-filter:blur(3px);z-index:9999;display:none;align-items:flex-start;justify-content:center;padding:32px 16px;overflow-y:auto;}
+.dm-overlay.open{display:flex;}
+.dm-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.3);width:100%;max-width:900px;margin:auto;overflow:hidden;}
+.dm-hd{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 22px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:2;}
+.dm-hd-ttl{font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;line-height:1.3;}
+.dm-hd-sub{font-size:11px;color:var(--muted);margin-top:3px;}
+.dm-close{background:var(--surface2);border:1px solid var(--border);border-radius:8px;width:32px;height:32px;flex:0 0 32px;cursor:pointer;font-size:16px;color:var(--muted);display:flex;align-items:center;justify-content:center;line-height:1;}
+.dm-close:hover{background:var(--border);}
+.dm-toolbar{display:flex;align-items:center;gap:8px;padding:12px 22px;border-bottom:1px solid var(--border);flex-wrap:wrap;}
+.dm-toggle{display:inline-flex;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:2px;}
+.dm-toggle button{border:none;background:transparent;padding:5px 12px;border-radius:7px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;}
+.dm-toggle button.on{background:var(--accent,#0ea5e9);color:#fff;}
+.dm-body{padding:16px 22px 22px;max-height:65vh;overflow-y:auto;}
+.dm-utm-grp{margin-bottom:22px;}
+.dm-utm-grp:last-child{margin-bottom:0;}
+.dm-utm-ttl{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:10px;padding-bottom:6px;border-bottom:1px dashed var(--border);}
+.dm-row{margin-bottom:14px;}
+.dm-row-hd{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:5px;}
+.dm-row-lbl{font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:75%;}
+.dm-row-n{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;white-space:nowrap;}
+.dm-bar{display:flex;height:26px;border-radius:6px;overflow:hidden;background:var(--surface2);}
+.dm-seg{height:100%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;overflow:hidden;white-space:nowrap;min-width:0;transition:opacity .15s;}
+.dm-seg:hover{opacity:.85;}
+.dm-legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
+.dm-leg-item{display:flex;align-items:center;gap:5px;font-size:11px;}
+.dm-leg-dot{width:11px;height:11px;border-radius:3px;flex:0 0 11px;}
+
+.dm-tip{position:fixed;z-index:10001;pointer-events:none;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.2);padding:7px 10px;font-size:11px;display:none;max-width:240px;}
+.dm-tip.on{display:block;}
+.dm-tip-row{display:flex;align-items:center;gap:6px;margin-bottom:2px;}
+.dm-tip-dot{width:10px;height:10px;border-radius:3px;flex:0 0 10px;}
+.dm-tip-lbl{font-weight:600;}
+.dm-tip-val{color:var(--muted);font-family:'DM Mono',monospace;}
+.pz-card{cursor:pointer;transition:transform .12s,box-shadow .12s;}
+.pz-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.12);}
+.pz-card:hover .pz-q::after{content:' 🔍';font-size:11px;opacity:.6;}
+
 </style>
 </head>
 <body>
@@ -385,7 +424,12 @@ details.desk-only{display:block!important;}
     <!-- PESQUISA -->
     <div class="page-section" id="page-pesquisa">
       <div class="krow pes-kpis" id="pesKpis"></div>
-      <details class="filter-box" style="padding:0">
+      <div class="pes-daily-card" id="pesDailyCard" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;margin-bottom:14px;box-shadow:var(--sh)">
+        <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:2px">Respostas por Dia</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px">adapta ao período e filtros selecionados</div>
+        <div style="height:180px"><canvas id="chPesDaily"></canvas></div>
+      </div>
+            <details class="filter-box" style="padding:0">
         <summary style="padding:12px 14px;cursor:pointer;font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:1px;list-style:none;display:flex;align-items:center;justify-content:space-between;user-select:none;">
           Filtrar respostas por origem <span style="font-size:13px;color:var(--muted2)">▾</span>
         </summary>
@@ -1400,6 +1444,103 @@ function buildUtmFilters(){
   }).join('');
 }
 
+
+// ═══ DRILL-DOWN PESQUISA (modal por pergunta × origem) ═══
+var drillState={q:null, mode:'pct'};
+
+function openDrill(qIndex){
+  const p=PESQUISA.perguntas[qIndex];
+  if(!p) return;
+  drillState.q=p;
+  // aplica os mesmos filtros UTM ativos
+  let rows=PESQUISA.rows;
+  Object.entries(pesFilters).forEach(function(e){
+    const utm=e[0], vals=e[1];
+    if(!vals||vals.size===0) return;
+    rows=rows.filter(function(r){return vals.has(r[utm]);});
+  });
+  drillState.rows=rows;
+
+  document.getElementById('drillTtl').textContent=cleanQ(p);
+  const nResp=rows.filter(function(r){return r[p]&&r[p]!=='null'&&r[p]!=='undefined';}).length;
+  document.getElementById('drillSub').textContent=function(n){return n+' respostas';}(nResp);
+  document.getElementById('drillModeLbl').textContent='Visão:';
+  document.getElementById('drillToggle').innerHTML=
+    '<button id="dmPct" class="'+(drillState.mode==='pct'?'on':'')+'" onclick="setDrillMode(\'pct\')">%</button>'+
+    '<button id="dmAbs" class="'+(drillState.mode==='abs'?'on':'')+'" onclick="setDrillMode(\'abs\')">'+'Nº'+'</button>';
+  renderDrill();
+  document.getElementById('drillModal').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeDrill(){
+  document.getElementById('drillModal').classList.remove('open');
+  document.body.style.overflow='';
+}
+function setDrillMode(m){
+  drillState.mode=m;
+  document.getElementById('dmPct').classList.toggle('on',m==='pct');
+  document.getElementById('dmAbs').classList.toggle('on',m==='abs');
+  renderDrill();
+}
+
+function renderDrill(){
+  const p=drillState.q, rows=drillState.rows, mode=drillState.mode;
+  // ordem global das respostas (para cores consistentes) — pela frequência total
+  const globalCounts={};
+  rows.forEach(function(r){var v=r[p];if(v&&v!=='null'&&v!=='undefined')globalCounts[v]=(globalCounts[v]||0)+1;});
+  const answers=Object.entries(globalCounts).sort(function(a,b){return b[1]-a[1];}).map(function(e){return e[0];});
+  const colorOf={}; answers.forEach(function(a,i){colorOf[a]=PIZZA_COLS[i%PIZZA_COLS.length];});
+
+  // UTMs que têm filtro
+  const utms=Object.keys(PESQUISA.filtros||{}).filter(function(k){return (PESQUISA.filtros[k]||[]).length;});
+  var html='';
+  utms.forEach(function(utm){
+    const vals=PESQUISA.filtros[utm];
+    var grp='<div class="dm-utm-grp"><div class="dm-utm-ttl">'+(function(u){var M={utm_source:'Origem',utm_medium:'Meio',utm_campaign:'Campanha',utm_content:'Conteúdo'};return M[u]||u;}(utm))+'</div>';
+    var anyRow=false;
+    vals.forEach(function(val){
+      // respostas dessa origem que responderam a pergunta
+      const sub=rows.filter(function(r){return r[utm]===val && r[p] && r[p]!=='null' && r[p]!=='undefined';});
+      if(!sub.length) return;
+      anyRow=true;
+      const cnt={}; sub.forEach(function(r){cnt[r[p]]=(cnt[r[p]]||0)+1;});
+      const totalRow=sub.length;
+      const label=(val==='(vazio)')?'(sem preenchimento)':val;
+      var segs=answers.filter(function(a){return cnt[a];}).map(function(a){
+        const n=cnt[a], pct=n/totalRow*100;
+        const w=mode==='pct'?pct:(n/__MAXROW__(rows,p,utm,vals)*100);
+        const showTxt=pct>=8;
+        const txt=mode==='pct'?(pct.toFixed(0)+'%'):String(n);
+        return '<div class="dm-seg" style="width:'+w+'%;background:'+colorOf[a]+'" '
+          +'data-a="'+encodeURIComponent(a)+'" data-n="'+n+'" data-p="'+pct.toFixed(1)+'" data-c="'+colorOf[a]+'" '
+          +'onmouseenter="dmTipShow(event)" onmousemove="dmTipMove(event)" onmouseleave="dmTipHide()">'+(showTxt?txt:'')+'</div>';
+      }).join('');
+      grp+='<div class="dm-row"><div class="dm-row-hd"><div class="dm-row-lbl" title="'+label+'">'+label+'</div>'+
+        '<div class="dm-row-n">'+totalRow+' '+'resp.'+'</div></div>'+
+        '<div class="dm-bar">'+segs+'</div></div>';
+    });
+    grp+='</div>';
+    if(anyRow) html+=grp;
+  });
+
+  // legenda global
+  var leg='<div class="dm-legend">'+answers.map(function(a){
+    return '<div class="dm-leg-item"><span class="dm-leg-dot" style="background:'+colorOf[a]+'"></span>'+a+'</div>';
+  }).join('')+'</div>';
+
+  document.getElementById('drillBody').innerHTML=(html||('<div style="text-align:center;color:var(--muted);padding:30px;font-size:12px">'+'Sem dados para esta combinação'+'</div>'))+leg;
+}
+
+// maior total de linha (para escala do modo absoluto) dentro de uma UTM
+function __MAXROW__(rows,p,utm,vals){
+  var mx=1;
+  vals.forEach(function(val){
+    const n=rows.filter(function(r){return r[utm]===val && r[p] && r[p]!=='null' && r[p]!=='undefined';}).length;
+    if(n>mx) mx=n;
+  });
+  return mx;
+}
+
 function onPesCheck(cb){
   const utm=cb.dataset.utm;
   if(!pesFilters[utm]) pesFilters[utm]=new Set();
@@ -1417,6 +1558,80 @@ function checkAll(check){
   buildPizzas();
 }
 
+
+
+// ═══ TOOLTIP DRILL-DOWN ═══
+function dmTipShow(ev){
+  const s=ev.currentTarget, tip=document.getElementById('dmTip');
+  if(!tip) return;
+  const a=decodeURIComponent(s.dataset.a||''), n=s.dataset.n, p=s.dataset.p, c=s.dataset.c;
+  tip.innerHTML='<div class="dm-tip-row"><span class="dm-tip-dot" style="background:'+c+'"></span>'
+    +'<span class="dm-tip-lbl">'+a+'</span></div>'
+    +'<div class="dm-tip-val">'+n+' resp. · '+p+'%</div>';
+  tip.classList.add('on');
+  dmTipMove(ev);
+}
+function dmTipMove(ev){
+  const tip=document.getElementById('dmTip');
+  if(!tip||!tip.classList.contains('on')) return;
+  var x=ev.clientX+14, y=ev.clientY+14;
+  const w=tip.offsetWidth, h=tip.offsetHeight;
+  if(x+w>window.innerWidth-8) x=ev.clientX-w-14;
+  if(y+h>window.innerHeight-8) y=ev.clientY-h-14;
+  tip.style.left=x+'px'; tip.style.top=y+'px';
+}
+function dmTipHide(){
+  const tip=document.getElementById('dmTip');
+  if(tip) tip.classList.remove('on');
+}
+// limpa quebras de linha no texto exibido de uma pergunta
+function cleanQ(s){ return String(s).replace(/\s+/g,' ').trim(); }
+
+
+// janela de dias (dd/mm) do período ativo — compartilhada pelo gráfico diário e pelas pizzas
+function pesJanelaDias(){
+  try{
+    const base=applyPeriod(META_DAILY && (filtroLct?META_DAILY.lct:META_DAILY.all));
+    if(base&&base.days) return new Set(base.days);
+  }catch(e){}
+  return null;
+}
+
+// ═══ GRÁFICO RESPOSTAS/DIA (aba Pesquisa) ═══
+function renderPesDaily(filteredRows){
+  const card=document.getElementById('pesDailyCard');
+  if(!card) return;
+  // dias disponíveis a partir das respostas com data
+  const withDate=(filteredRows||[]).filter(function(r){return r._d;});
+  if(!withDate.length){ card.style.display='none'; return; }
+  card.style.display='';
+
+  // recorte por período: usa os mesmos dias do META_DAILY para saber a janela ativa
+  var janela=pesJanelaDias();
+
+  const counts={};
+  withDate.forEach(function(r){
+    if(janela && !janela.has(r._d)) return;
+    counts[r._d]=(counts[r._d]||0)+1;
+  });
+  function dk(s){var p=s.split('/');return parseInt(p[1])*100+parseInt(p[0]);}
+  const days=Object.keys(counts).sort(function(a,b){return dk(a)-dk(b);});
+  const vals=days.map(function(d){return counts[d];});
+
+  const id='chPesDaily';
+  if(PC[id]){PC[id].destroy();delete PC[id];}
+  if(CH[id]){CH[id].destroy();delete CH[id];}
+  var ac=(typeof COR_ACENTO!=='undefined'&&COR_ACENTO)?COR_ACENTO:'#0ea5e9';
+  CH[id]=new Chart(document.getElementById(id),{type:'bar',
+    data:{labels:days,datasets:[{label:'Respostas',data:vals,backgroundColor:ac+'cc',borderRadius:4}]},
+    options:{...bo(),plugins:{...bo().plugins,legend:{display:false},
+      datalabels:{display:function(){return showLabels;},color:TXT(),font:{size:10,weight:'bold'},
+        anchor:'end',align:'top',offset:2,clip:false,formatter:function(v){return v>0?v:null;}}},
+      scales:{x:{ticks:{color:TXT(),font:bf},grid:{color:GRID()}},
+              y:{ticks:{color:TXT(),font:bf,precision:0},grid:{color:GRID()},min:0,grace:'15%'}}}
+  });
+}
+
 function buildPizzas(){
   if(!PESQUISA) return;
   let rows=PESQUISA.rows;
@@ -1424,11 +1639,16 @@ function buildPizzas(){
     if(!vals||vals.size===0) return;
     rows=rows.filter(r=>vals.has(r[utm]));
   });
+  // filtro por PERÍODO (data): só respostas cujo dia está na janela ativa.
+  // respostas sem data (_d ausente) permanecem, para não sumirem quando não há timestamp.
+  const _jan=pesJanelaDias();
+  if(_jan){ rows=rows.filter(r=>!r._d || _jan.has(r._d)); }
   document.getElementById('pesCount').textContent=`${rows.length} respondentes selecionados`;
+  renderPesDaily(rows);
   const grid=document.getElementById('pizzaGrid');
   grid.innerHTML=PESQUISA.perguntas.map((p,i)=>`
-    <div class="pz-card">
-      <div class="pz-q">${p}</div>
+    <div class="pz-card" onclick="openDrill(${i})">
+      <div class="pz-q">${cleanQ(p)}</div>
       <div class="pz-cw"><canvas id="pz_${i}"></canvas></div>
       <div class="pz-leg" id="pzl_${i}"></div>
     </div>`).join('');
@@ -1980,5 +2200,22 @@ window.addEventListener('resize', ajustarPaddingContent);
   ajustarPaddingContent();
 })();
 </script>
+
+  <!-- MODAL DRILL-DOWN PESQUISA -->
+    <div class="dm-tip" id="dmTip"></div>
+  <div class="dm-overlay" id="drillModal" onclick="if(event.target===this)closeDrill()">
+    <div class="dm-box">
+      <div class="dm-hd">
+        <div><div class="dm-hd-ttl" id="drillTtl"></div><div class="dm-hd-sub" id="drillSub"></div></div>
+        <button class="dm-close" onclick="closeDrill()">✕</button>
+      </div>
+      <div class="dm-toolbar">
+        <span style="font-size:11px;color:var(--muted);font-weight:600" id="drillModeLbl"></span>
+        <div class="dm-toggle" id="drillToggle"></div>
+      </div>
+      <div class="dm-body" id="drillBody"></div>
+    </div>
+  </div>
+
 </body>
 </html>
