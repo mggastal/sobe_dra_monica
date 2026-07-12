@@ -449,15 +449,29 @@ def pesquisa_process(df, total_leads):
                              "Qual seu e-mail de cadastro no evento?",
                              "Qual seu primeiro nome?","Qual seu whatsapp?",
                              "Nome","nome","ID","id","Unnamed: 0"])
-    PERGUNTAS=[c for c in df.columns
-               if c not in SKIP_COLS and not c.lower().startswith("unnamed")
-               and str(c).strip() and pd.api.types.is_string_dtype(df[c])
-               and df[c].nunique()<=50]
-    graficos=[]
-    for p in PERGUNTAS:
-        if p not in df.columns: continue
-        vc=df[p].value_counts(); total=vc.sum()
-        graficos.append({"pergunta":p,"opcoes":[{"label":str(k),"qtd":int(v),"pct":round(v/total*100,1)} for k,v in vc.items()]})
+    # Palavras que indicam campo de identificação livre (não é pergunta de múltipla escolha)
+    _ID_HINTS=("nome","name","email","e-mail","mail","whats","telefone","phone",
+               "celular","cpf","data","hora","carimbo","timestamp","marca temporal",
+               "marca de tiempo","fecha","sello")
+    def _is_pergunta(c):
+        if c in SKIP_COLS or c.lower().startswith("unnamed"): return False
+        if not str(c).strip(): return False
+        cl=str(c).lower()
+        if any(h in cl for h in _ID_HINTS): return False
+        if not pd.api.types.is_string_dtype(df[c]): return False
+        serie=df[c].dropna()
+        n=len(serie)
+        if n==0: return False
+        nun=serie.nunique()
+        if nun>50: return False
+        # descarta perguntas "abertas": quando a maioria das respostas é única
+        # (nome, e-mail, etc. que escaparam das dicas acima). Limiar: >60% únicas
+        # e com pelo menos 8 respostas para evitar falso-positivo em amostras pequenas.
+        if n>=8 and (nun/n)>0.6: return False
+        return True
+    PERGUNTAS=[c for c in df.columns if _is_pergunta(c)]
+    def _clean_q(s): return " ".join(str(s).split())  # remove \n e espaços duplos
+    graficos=[]  # reconstruído após filtrar rows vazias
     EMPTY_TOKEN="(vazio)"
     # Normaliza UTMs: valor real (str) ou EMPTY_TOKEN quando ausente/vazio.
     # Assim TODAS as respostas entram nos filtros e "tudo marcado" = 100% dos dados.
@@ -470,9 +484,21 @@ def pesquisa_process(df, total_leads):
     rows=[]
     for _,r in df.iterrows():
         row={}
-        for p in PERGUNTAS: row[p]=str(r[p]) if p in df.columns and pd.notna(r.get(p)) else None
+        _tem_resposta=False
+        for p in PERGUNTAS:
+            val=str(r[p]) if p in df.columns and pd.notna(r.get(p)) else None
+            row[p]=val
+            if val and val.strip(): _tem_resposta=True
         for col in UTM_COLS: row[col]=_utm_val(r, col)
-        rows.append(row)
+        # descarta linhas totalmente vazias (planilha às vezes traz milhares de linhas em branco)
+        if _tem_resposta: rows.append(row)
+    # gráficos a partir das rows válidas (não do df cru com linhas vazias)
+    from collections import Counter as _Counter
+    for p in PERGUNTAS:
+        _c=_Counter(row[p] for row in rows if row.get(p) and str(row[p]).strip())
+        _tot=sum(_c.values())
+        if _tot==0: continue
+        graficos.append({"pergunta":p,"opcoes":[{"label":str(k),"qtd":int(v),"pct":round(v/_tot*100,1)} for k,v in _c.most_common()]})
     # Filtros a partir dos valores efetivamente presentes nas rows (inclui EMPTY_TOKEN);
     # ordena com valores reais primeiro e "(vazio)" por último.
     filtros={}
@@ -480,7 +506,28 @@ def pesquisa_process(df, total_leads):
         vals=sorted(set(row[col] for row in rows if row.get(col) and row[col]!=EMPTY_TOKEN))
         if any(row.get(col)==EMPTY_TOKEN for row in rows): vals=vals+[EMPTY_TOKEN]
         if vals: filtros[col]=vals
-    return {"total":len(df),"total_leads":int(total_leads),"graficos":graficos,"filtros":filtros,"rows":rows,"perguntas":PERGUNTAS}
+    # Série de respostas por dia (para o gráfico no topo, adaptável ao período)
+    resp_por_dia=[]
+    _date_col=None
+    for c in df.columns:
+        cl=str(c).lower()
+        if any(h in cl for h in ("carimbo","timestamp","marca temporal","marca de tiempo","data/hora","fecha","sello de tiempo")):
+            _date_col=c; break
+    if _date_col is not None:
+        _dt=pd.to_datetime(df[_date_col], errors="coerce", dayfirst=True)
+        _por_dia=_dt.dropna().dt.strftime("%d/%m").value_counts()
+        def _dk(s):
+            dd,mm=s.split("/"); return int(mm)*100+int(dd)
+        for d in sorted(_por_dia.index, key=_dk):
+            resp_por_dia.append({"d":d,"n":int(_por_dia[d])})
+        # rows recebem a data para permitir filtro por período no front
+        _dt_fmt=_dt.dt.strftime("%d/%m")
+        for i,(_,r) in enumerate(df.iterrows()):
+            if i<len(rows):
+                v=_dt_fmt.iloc[i] if i<len(_dt_fmt) else None
+                rows[i]["_d"]=v if pd.notna(v) else None
+    return {"total":len(rows),"total_leads":int(total_leads),"graficos":graficos,
+            "filtros":filtros,"rows":rows,"perguntas":PERGUNTAS,"resp_por_dia":resp_por_dia}
 
 # ══ INJEÇÃO ════════════════════════════════════════════
 def replace_js_const(html, name, value):
