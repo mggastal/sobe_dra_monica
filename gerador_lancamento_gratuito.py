@@ -20,6 +20,24 @@ COR_ACENTO       = "#0ea5e9"
 LANCAMENTO_COD   = "RDC03"        # filtra campanhas; "" = ver tudo
 USAR_PESQUISA    = True            # False = oculta aba Pesquisa
 USAR_VENDAS      = True            # False = oculta menu Vendas (Hotmart)
+USAR_COMPARATIVO = True            # False = oculta menu Comparativo de lançamentos
+
+# Lançamentos comparados na aba "Comparativo" (ordem = ordem no gráfico)
+LANCAMENTOS_COMPARAR = [
+    {"cod":"RDC01","aba":"RDC01",  "label":"RDC01 · Março","cor":"#94a3b8"},
+    {"cod":"RDC02","aba":"RDC02",  "label":"RDC02 · Maio", "cor":"#f59e0b"},
+    {"cod":"RDC03","aba":"hotmart","label":"RDC03 · Atual","cor":"#0ea5e9","atual":True},
+]
+# Ignora vendas abaixo deste valor (ex.: 10 descarta compras-teste de R$1). 0 = não filtra.
+VENDA_VALOR_MIN  = 0
+
+# Valor fixo por produto (substitui o preço da planilha, que traz juros de parcelamento).
+# Aplicado só nas abas listadas em PRECO_FIXO_ABAS. Deixe {} para usar o preço da planilha.
+PRECO_FIXO = {
+    "De frente com Dra Monica": 1710.90,
+    "Checklist: O passo a passo para garantir a segurança do seu consultório": 1429.10,
+}
+PRECO_FIXO_ABAS = ["hotmart"]   # abas onde PRECO_FIXO vale (o lançamento ao vivo)
 
 
 # Metas do funil — define cores (verde/amarelo/vermelho)
@@ -35,7 +53,8 @@ CPM_BOM          = 5.0
 CPM_MEDIO        = 12.0
 
 # ══════════════════════════════════════════════════════
-def sheet_url(t): return f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={t}"
+from urllib.parse import quote as _q
+def sheet_url(t): return f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={_q(str(t))}"
 URL_META = sheet_url("meta-ads")
 URL_PES  = sheet_url("Pesquisa")
 URL_GA   = sheet_url("breakdown-gender-age")
@@ -311,133 +330,360 @@ def meta_breakdowns(df):
     return result
 
 # ══ HOTMART ═══════════════════════════════════════════
+# Abas tentadas, em ordem, até uma responder com dados.
+HOTMART_ABAS = ["hotmart", "hotmart tratado", "hotmart-tratado", "Hotmart", "hotmart_tratado"]
+
+def _txt(serie):
+    """Series -> texto seguro. Colunas 100% vazias viram '' em vez de quebrar o .str"""
+    return serie.astype(object).where(serie.notna(), "").astype(str)
+
+def _norm_col(c):
+    """normaliza header: minúsculo, sem acento, sem pontuação, sem prefixo Sales History"""
+    import unicodedata
+    s = str(c).strip()
+    s = unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode()
+    s = s.lower().replace("sales history", " ")
+    s = re.sub(r"[^a-z0-9]+", " ", s).strip()
+    return s
+
+# aliases aceitos por campo (comparados já normalizados)
+# Aliases por campo, em ordem de prioridade. Comparados com o header normalizado,
+# primeiro por igualdade exata; só se nenhum casar exato é que se tenta "contém".
+# Ordem importa no formato longo da Hotmart (ex.: "nome do produto" NÃO pode virar comprador).
+_HM_ALIAS = {
+    "date":       ["order date", "data de venda", "order date time", "data pedido", "data da compra", "date", "data"],
+    "price":      ["price", "preco do produto", "product price", "total price", "valor", "commission value"],
+    "status":     ["transaction status", "status"],
+    "sck":        ["tracking source sck", "origem de checkout", "sck", "source sck", "src sck", "tracking sck"],
+    "pgto_raw":   ["payment method", "tipo de pagamento", "forma pagamento", "metodo pagamento", "payment type"],
+    "nome":       ["buyer name", "nome", "nome comprador", "name"],
+    "email":      ["buyer email", "email", "e mail", "email comprador"],
+    "produto":    ["product name", "nome do produto", "produto"],
+    "utm_camp":   ["captacao campaign", "utm campaign", "campaign", "campanha"],
+    "utm_medium": ["captacao medium", "utm medium", "medium", "publico"],
+    "utm_content":["captacao content", "utm content", "content", "criativo"],
+}
+# Campos cujo alias pode aparecer como substring de OUTRA coluna (ex.: "nome" dentro de
+# "nome do produto"): só casam por igualdade exata, nunca por "contém".
+_HM_SO_EXATO = {"date", "price", "status", "nome", "email", "produto", "sck", "pgto_raw"}
+
+def _norm_pgto(m):
+    """Normaliza forma de pagamento (aceita PT e EN da Hotmart) em PIX / Cartão de Crédito / Boleto / Outro."""
+    s = str(m).upper()
+    if "PIX" in s or "ONEY" in s or "FINANCED" in s:      return "PIX"
+    if "BOLETO" in s or "BILLET" in s:                    return "Boleto"
+    if "CREDIT" in s or "CARD" in s or "CARTAO" in s or "CRÉDITO" in s or "CREDITO" in s or "NUPAY" in s or "HOTPAY" in s:
+        return "Cartão de Crédito"
+    if s in ("", "NAN", "NONE"):                          return "Outro"
+    return "Cartão de Crédito"
+
+def _aplicar_preco_fixo(df, aba):
+    """Se a aba está em PRECO_FIXO_ABAS, substitui price pelo valor fixo do produto.
+    Produtos sem entrada em PRECO_FIXO mantêm o preço original da planilha."""
+    if not PRECO_FIXO or aba not in PRECO_FIXO_ABAS or "produto" not in df.columns:
+        return df
+    prod = _txt(df["produto"]).str.strip()
+    fixo = prod.map(PRECO_FIXO)
+    n = int(fixo.notna().sum())
+    df = df.copy()
+    df["price"] = fixo.where(fixo.notna(), df["price"])
+    achou = sorted(set(prod[fixo.notna()]))
+    faltou = sorted(set(prod[fixo.isna()]) - {"", "nan"})
+    print(f"     preço fixo aplicado em {n} venda(s): {achou}")
+    if faltou:
+        print(f"     ⚠ produtos SEM preço fixo (usando valor da planilha): {faltou}")
+    return df
+
+def _map_hotmart_cols(df):
+    """devolve (df_renomeado, faltando[], achados{}) mapeando headers reais -> nomes internos.
+    Casa primeiro por igualdade exata do header normalizado; só depois, e apenas para campos
+    fora de _HM_SO_EXATO, tenta 'contém'. Cada coluna original é usada uma única vez, evitando
+    que 'nome do produto' seja confundido com 'nome' (comprador) no export longo da Hotmart."""
+    norm = {_norm_col(c): c for c in df.columns}   # header_normalizado -> header_real
+    ren, achados, usados = {}, {}, set()
+
+    # passo 1 — igualdade exata (respeita a ordem de prioridade dos aliases)
+    for interno, aliases in _HM_ALIAS.items():
+        for a in aliases:
+            real = norm.get(a)
+            if real and real not in usados:
+                ren[real] = interno; achados[interno] = real; usados.add(real); break
+
+    # passo 2 — 'contém', só para campos seguros ainda não resolvidos
+    for interno, aliases in _HM_ALIAS.items():
+        if interno in achados or interno in _HM_SO_EXATO:
+            continue
+        for a in aliases:
+            for n, real in norm.items():
+                if real in usados:
+                    continue
+                if a in n:
+                    ren[real] = interno; achados[interno] = real; usados.add(real); break
+            if interno in achados:
+                break
+
+    df = df.rename(columns=ren)
+    faltando = [k for k in ("date", "price") if k not in df.columns]
+    return df, faltando, achados
+
+def _ler_hotmart():
+    """tenta as abas de HOTMART_ABAS até achar uma legível. Devolve (df, nome_aba)."""
+    erros = []
+    for aba in HOTMART_ABAS:
+        try:
+            d = pd.read_csv(sheet_url(aba))
+            if len(d.columns) == 0:
+                erros.append(f"{aba}: sem colunas"); continue
+            print(f"     aba '{aba}' OK — {len(d)} linhas, {len(d.columns)} colunas")
+            return d, aba
+        except Exception as e:
+            erros.append(f"{aba}: {type(e).__name__}")
+    print("     nenhuma aba de vendas encontrada → " + " | ".join(erros))
+    return None, None
+
 def hotmart_data():
     print("  Lendo hotmart...")
     try:
-        df=pd.read_csv(URL_HOTMART)
-        df=df.rename(columns={
-            "Sales History Order Date":"date","Sales History Price":"price",
-            "Sales History Transaction Status":"status",
-            "Sales History Tracking Source SCK":"sck",
-            "Sales History Payment Method":"pgto_raw",
-            "Sales History Buyer Name":"nome","Sales History Buyer Email":"email",
-            "Captacao_Campaign":"utm_camp","Captacao_Medium":"utm_medium","Captacao_Content":"utm_content",
-        })
-        df["date"]=pd.to_datetime(df["date"],errors="coerce")
-        df["price"]=to_num(df["price"])
-        df=df[df["status"].isin(["APPROVED","COMPLETE"])].dropna(subset=["date"])
-        print(f"     {len(df)} vendas aprovadas | R${df['price'].sum():,.2f}")
+        df, aba = _ler_hotmart()
+        if df is None:
+            print(f"  ✗ VENDAS DESATIVADAS: nenhuma das abas {HOTMART_ABAS} existe na planilha.")
+            print("    → ajuste HOTMART_ABAS no topo do gerador com o nome exato da aba.")
+            return None
+
+        df, faltando, achados = _map_hotmart_cols(df)
+        if faltando:
+            print(f"  ✗ VENDAS DESATIVADAS: coluna(s) obrigatória(s) não encontrada(s): {faltando}")
+            print(f"    Colunas disponíveis na aba '{aba}': {list(df.columns)[:25]}")
+            return None
+        print(f"     colunas mapeadas: {achados}")
+
+        # colunas opcionais ausentes viram vazias (em vez de quebrar tudo)
+        for opc in ("status", "sck", "pgto_raw", "nome", "email", "utm_camp", "utm_medium", "utm_content"):
+            if opc not in df.columns: df[opc] = ""
+
+        # data: ISO (2026-07-10) sem dayfirst; formato BR (10/07/2026) com dayfirst
+        _amostra = _txt(df["date"]).str.strip()
+        _iso = _amostra.str.match(r"^\d{4}-\d{2}-\d{2}").fillna(False).mean() > 0.5
+        df["date"] = pd.to_datetime(df["date"], errors="coerce", dayfirst=not _iso)
+        df["price"] = to_num(df["price"])
+        df = _aplicar_preco_fixo(df, aba)
+        df = df.dropna(subset=["date"])
+
+        # status: aceita variações PT/EN; se a coluna vier vazia, não filtra
+        st = _txt(df["status"]).str.strip().str.upper()
+        aprovados = ["APPROVED", "COMPLETE", "COMPLETED", "APROVADO", "APROVADA", "COMPLETO", "PAGO", "PAID"]
+        if st.isin(aprovados).any():
+            antes = len(df); df = df[st.isin(aprovados)]
+            print(f"     status: {len(df)}/{antes} linhas aprovadas")
+        elif st.replace("", pd.NA).notna().any() and st.nunique() > 1:
+            print(f"     ⚠ status não reconhecido {sorted(st.unique())[:8]} — usando TODAS as linhas")
+        if len(df) == 0:
+            print("  ⚠ Aba de vendas lida, mas 0 linhas válidas — menu Vendas ficará vazio.")
+
+        print(f"     {len(df)} vendas | R${df['price'].sum():,.2f}")
 
         # Investimento Meta (só LANCAMENTO_COD)
-        df_meta_inv=None
+        df_meta_inv = None
         try:
-            df_m=pd.read_csv(URL_META)
-            df_m["spend"]=to_num(df_m.get("Spend (Cost, Amount Spent)",pd.Series([0]*len(df_m))))
-            df_m["leads"]=to_num(df_m.get("Action Leads",pd.Series([0]*len(df_m))))
-            if LANCAMENTO_COD:
-                df_m=df_m[df_m.get("Campaign Name",pd.Series([""])).str.contains(LANCAMENTO_COD,na=False)]
-            df_meta_inv=df_m
-        except: pass
+            df_m = pd.read_csv(URL_META)
+            df_m["spend"] = to_num(df_m.get("Spend (Cost, Amount Spent)", pd.Series([0]*len(df_m))))
+            df_m["leads"] = to_num(df_m.get("Action Leads", pd.Series([0]*len(df_m))))
+            if LANCAMENTO_COD and "Campaign Name" in df_m.columns:
+                df_m = df_m[df_m["Campaign Name"].str.contains(LANCAMENTO_COD, na=False)]
+            df_meta_inv = df_m
+        except Exception as e:
+            print(f"     ⚠ cruzamento Meta indisponível ({type(e).__name__}) — tabelas sem investimento")
 
-        camp_inv=df_meta_inv.groupby("Campaign Name")["spend"].sum().to_dict() if df_meta_inv is not None else {}
-        camp_leads_d=df_meta_inv.groupby("Campaign Name")["leads"].sum().to_dict() if df_meta_inv is not None else {}
-        adset_inv=df_meta_inv.groupby("Adset Name")["spend"].sum().to_dict() if df_meta_inv is not None else {}
-        adset_leads_d=df_meta_inv.groupby("Adset Name")["leads"].sum().to_dict() if df_meta_inv is not None else {}
-        ad_inv=df_meta_inv.groupby("Ad Name")["spend"].sum().to_dict() if df_meta_inv is not None else {}
-        ad_leads_d=df_meta_inv.groupby("Ad Name")["leads"].sum().to_dict() if df_meta_inv is not None else {}
-        total_inv=df_meta_inv["spend"].sum() if df_meta_inv is not None else 0
+        def _soma(col, val):
+            if df_meta_inv is None or col not in df_meta_inv.columns: return {}
+            return df_meta_inv.groupby(col)[val].sum().to_dict()
 
-        # Diário
-        dg=df.groupby(df["date"].dt.strftime("%d/%m")).agg(vendas=("price","count"),receita=("price","sum")).reset_index().sort_values("date")
-        daily={"days":dg["date"].tolist(),"vendas":dg["vendas"].tolist(),"receita":[round(v,2) for v in dg["receita"]]}
+        camp_inv      = _soma("Campaign Name", "spend")
+        camp_leads_d  = _soma("Campaign Name", "leads")
+        adset_inv     = _soma("Adset Name", "spend")
+        adset_leads_d = _soma("Adset Name", "leads")
+        ad_inv        = _soma("Ad Name", "spend")
+        ad_leads_d    = _soma("Ad Name", "leads")
+        total_inv     = float(df_meta_inv["spend"].sum()) if df_meta_inv is not None else 0
+
+        # Diário — ordena pela data real, não pelo texto dd/mm
+        dg = (df.groupby(df["date"].dt.normalize())
+                .agg(vendas=("price", "count"), receita=("price", "sum"))
+                .reset_index().sort_values("date"))
+        daily = {"days": [d.strftime("%d/%m") for d in dg["date"]],
+                 "vendas": [int(v) for v in dg["vendas"]],
+                 "receita": [round(float(v), 2) for v in dg["receita"]]}
 
         # Canal SCK
-        df["canal"]=df["sck"].astype(str).str.split("|").str[0].replace({"nan":"Sem rastreio","":"Sem rastreio"})
-        cg=df.groupby("canal").agg(v=("price","count"),r=("price","sum")).reset_index().sort_values("v",ascending=False)
-        canal=[{"n":str(r["canal"]),"v":int(r["v"]),"r":round(float(r["r"]),2)} for _,r in cg.iterrows()]
+        df["canal"] = _txt(df["sck"]).str.split("|").str[0].replace({"nan": "Sem rastreio", "": "Sem rastreio"})
+        cg = df.groupby("canal").agg(v=("price", "count"), r=("price", "sum")).reset_index().sort_values("v", ascending=False)
+        canal = [{"n": str(r["canal"]), "v": int(r["v"]), "r": round(float(r["r"]), 2)} for _, r in cg.iterrows()]
 
         # SCK detalhado
-        sg=df.groupby("sck").agg(v=("price","count"),r=("price","sum")).reset_index().sort_values("v",ascending=False)
-        sck_data=[{"n":str(r["sck"]),"v":int(r["v"]),"r":round(float(r["r"]),2)} for _,r in sg.iterrows()]
+        sg = df.groupby(_txt(df["sck"])).agg(v=("price", "count"), r=("price", "sum")).reset_index().sort_values("v", ascending=False)
+        sck_data = [{"n": str(r.iloc[0]), "v": int(r["v"]), "r": round(float(r["r"]), 2)} for _, r in sg.iterrows()]
 
         # Temperatura
-        camp_col=df["utm_camp"].fillna("").astype(str).str.upper()
-        df["temp"]=camp_col.apply(lambda x:"Quente" if "QUENTE" in x else("Frio" if "FRIO" in x else "Sem rastreio"))
-        tg=df.groupby("temp").agg(v=("price","count"),r=("price","sum")).reset_index()
-        tg["_o"]=tg["temp"].map({"Quente":0,"Frio":1,"Sem rastreio":2})
-        temperatura=[{"n":str(r["temp"]),"v":int(r["v"]),"r":round(float(r["r"]),2)} for _,r in tg.sort_values("_o").iterrows()]
+        camp_col = _txt(df["utm_camp"]).str.upper()
+        df["temp"] = camp_col.apply(lambda x: "Quente" if "QUENTE" in x else ("Frio" if "FRIO" in x else "Sem rastreio"))
+        tg = df.groupby("temp").agg(v=("price", "count"), r=("price", "sum")).reset_index()
+        tg["_o"] = tg["temp"].map({"Quente": 0, "Frio": 1, "Sem rastreio": 2})
+        temperatura = [{"n": str(r["temp"]), "v": int(r["v"]), "r": round(float(r["r"]), 2)} for _, r in tg.sort_values("_o").iterrows()]
 
         # Pagamentos
-        def fmt_pgto(m):
-            return "PIX" if ("ONEY" in str(m).upper() or "FINANCED" in str(m).upper()) else "Cartão de Crédito"
-        def fmt_pgto_full(m):
-            return "PIX" if ("ONEY" in str(m).upper() or "FINANCED" in str(m).upper()) else "Cartão de Crédito"
-        df["tipo_pgto"]=df["pgto_raw"].fillna("").apply(fmt_pgto)
-        pg=df.groupby("tipo_pgto").agg(v=("price","count"),r=("price","sum")).reset_index().sort_values("v",ascending=False)
-        pagamentos=[{"n":str(r["tipo_pgto"]),"v":int(r["v"]),"r":round(float(r["r"]),2)} for _,r in pg.iterrows()]
+        fmt_pgto = _norm_pgto
+        fmt_pgto_full = _norm_pgto
+        df["tipo_pgto"] = df["pgto_raw"].fillna("").apply(fmt_pgto)
+        pg = df.groupby("tipo_pgto").agg(v=("price", "count"), r=("price", "sum")).reset_index().sort_values("v", ascending=False)
+        pagamentos = [{"n": str(r["tipo_pgto"]), "v": int(r["v"]), "r": round(float(r["r"]), 2)} for _, r in pg.iterrows()]
 
         # Cruzamento UTM x Meta
-        def build_cruzamento(col,inv_d,leads_d,label_sem):
-            df[col+"_c"]=df[col].fillna("").astype(str).str.strip()
-            g=df.groupby(col+"_c").agg(v=("price","count"),r=("price","sum")).reset_index().sort_values("v",ascending=False)
-            result=[]
-            for _,row in g.iterrows():
-                name=str(row[col+"_c"])
-                inv=inv_d.get(name,0)
-                lds=leads_d.get(name,0)
-                if inv==0:
-                    for k,v in inv_d.items():
-                        if name.lower() in k.lower() or k.lower() in name.lower(): inv+=v
-                if lds==0:
-                    for k,v in leads_d.items():
-                        if name.lower() in k.lower() or k.lower() in name.lower(): lds+=v
-                lds=int(lds); inv=round(inv,2)
-                result.append({"n":label_sem if name in("nan","NaN","","None") else name,
-                    "v":int(row["v"]),"r":round(float(row["r"]),2),"inv":inv,"lds":lds,
-                    "cpl":round(inv/lds,2) if lds>0 else None,
-                    "roas":round(float(row["r"])/inv,2) if inv>0 else None})
+        def build_cruzamento(col, inv_d, leads_d, label_sem):
+            df[col+"_c"] = _txt(df[col]).str.strip()
+            g = df.groupby(col+"_c").agg(v=("price", "count"), r=("price", "sum")).reset_index().sort_values("v", ascending=False)
+            result = []
+            for _, row in g.iterrows():
+                name = str(row[col+"_c"])
+                inv = inv_d.get(name, 0); lds = leads_d.get(name, 0)
+                if inv == 0:
+                    for k, v in inv_d.items():
+                        if name and (name.lower() in k.lower() or k.lower() in name.lower()): inv += v
+                if lds == 0:
+                    for k, v in leads_d.items():
+                        if name and (name.lower() in k.lower() or k.lower() in name.lower()): lds += v
+                lds = int(lds); inv = round(float(inv), 2)
+                result.append({"n": label_sem if name in ("nan", "NaN", "", "None") else name,
+                               "v": int(row["v"]), "r": round(float(row["r"]), 2), "inv": inv, "lds": lds,
+                               "cpl": round(inv/lds, 2) if lds > 0 else None,
+                               "roas": round(float(row["r"])/inv, 2) if inv > 0 else None})
             return result
 
-        utm_camp=build_cruzamento("utm_camp",camp_inv,camp_leads_d,"E-mail não encontrado na captação")
-        publicos=build_cruzamento("utm_medium",adset_inv,adset_leads_d,"Sem público")
-        criativos=build_cruzamento("utm_content",ad_inv,ad_leads_d,"Sem criativo")
-        roas_geral=round(df["price"].sum()/total_inv,2) if total_inv>0 else None
+        utm_camp   = build_cruzamento("utm_camp", camp_inv, camp_leads_d, "E-mail não encontrado na captação")
+        publicos   = build_cruzamento("utm_medium", adset_inv, adset_leads_d, "Sem público")
+        criativos  = build_cruzamento("utm_content", ad_inv, ad_leads_d, "Sem criativo")
+        roas_geral = round(df["price"].sum()/total_inv, 2) if total_inv > 0 else None
 
         # Raw para filtro de data no HTML
-        raw_rows=[]
-        for _,row in df.iterrows():
-            sck_v=str(row["sck"]) if pd.notna(row["sck"]) else ""
-            canal_v=sck_v.split("|")[0] if sck_v else ""
-            canal_v="Sem rastreio" if canal_v in ("","nan") else canal_v
-            camp_v=str(row.get("utm_camp","")) if pd.notna(row.get("utm_camp","")) else ""
-            pgto_v=fmt_pgto(row.get("pgto_raw",""))
-            temp_v="Quente" if "QUENTE" in camp_v.upper() else("Frio" if "FRIO" in camp_v.upper() else "Sem rastreio")
-            raw_rows.append({"d":row["date"].strftime("%d/%m"),"r":round(float(row["price"]),2),
-                "sck":sck_v,"canal":canal_v,"camp":camp_v if camp_v not in("","nan","NaN") else "",
-                "temp":temp_v,"pgto":pgto_v})
+        raw_rows = []
+        for _, row in df.iterrows():
+            sck_v = str(row["sck"]) if pd.notna(row["sck"]) else ""
+            canal_v = sck_v.split("|")[0] if sck_v else ""
+            canal_v = "Sem rastreio" if canal_v in ("", "nan") else canal_v
+            camp_v = str(row.get("utm_camp", "")) if pd.notna(row.get("utm_camp", "")) else ""
+            raw_rows.append({"d": row["date"].strftime("%d/%m"), "r": round(float(row["price"]), 2),
+                             "sck": sck_v, "canal": canal_v,
+                             "camp": camp_v if camp_v not in ("", "nan", "NaN") else "",
+                             "temp": "Quente" if "QUENTE" in camp_v.upper() else ("Frio" if "FRIO" in camp_v.upper() else "Sem rastreio"),
+                             "pgto": fmt_pgto(row.get("pgto_raw", ""))})
 
         # Vendas individuais (tabela detalhada + gráfico horário)
-        vendas_raw=[]
-        for _,row in df.sort_values("date",ascending=False).iterrows():
+        vendas_raw = []
+        for _, row in df.sort_values("date", ascending=False).iterrows():
             vendas_raw.append({
-                "d":row["date"].strftime("%d/%m/%Y %H:%M"),
-                "dia":row["date"].strftime("%d/%m"),
-                "hora":int(row["date"].strftime("%H")),
-                "nome":str(row.get("nome","")).title() if pd.notna(row.get("nome","")) else "—",
-                "email":str(row.get("email","")) if pd.notna(row.get("email","")) else "—",
-                "valor":round(float(row["price"]),2),
-                "pgto":fmt_pgto_full(row.get("pgto_raw","")),
-                "sck":str(row.get("sck","—")) if pd.notna(row.get("sck","")) else "—",
-                "camp":str(row.get("utm_camp","—")) if pd.notna(row.get("utm_camp","")) else "—",
+                "d": row["date"].strftime("%d/%m/%Y %H:%M"),
+                "dia": row["date"].strftime("%d/%m"),
+                "hora": int(row["date"].strftime("%H")),
+                "nome": str(row.get("nome", "")).title() if pd.notna(row.get("nome", "")) and str(row.get("nome", "")) else "—",
+                "email": str(row.get("email", "")) if pd.notna(row.get("email", "")) and str(row.get("email", "")) else "—",
+                "valor": round(float(row["price"]), 2),
+                "pgto": fmt_pgto_full(row.get("pgto_raw", "")),
+                "sck": str(row.get("sck", "")) or "—",
+                "camp": str(row.get("utm_camp", "")) or "—",
             })
 
-        return {"daily":daily,"canal":canal,"sck":sck_data,"temperatura":temperatura,
-                "pagamentos":pagamentos,"utm_camp":utm_camp,"publicos":publicos,"criativos":criativos,
-                "total_inv":round(total_inv,2),"roas_geral":roas_geral,
-                "raw":raw_rows,"vendas_raw":vendas_raw}
+        return {"daily": daily, "canal": canal, "sck": sck_data, "temperatura": temperatura,
+                "pagamentos": pagamentos, "utm_camp": utm_camp, "publicos": publicos, "criativos": criativos,
+                "total_inv": round(total_inv, 2), "roas_geral": roas_geral,
+                "raw": raw_rows, "vendas_raw": vendas_raw}
     except Exception as e:
         import traceback; traceback.print_exc()
-        print(f"  Aviso Hotmart: {e}"); return None
+        print(f"  ✗ VENDAS DESATIVADAS por erro: {type(e).__name__}: {e}")
+        return None
+
+# ══ COMPARATIVO DE LANÇAMENTOS ════════════════════════
+def _serie_lancamento(df, cod, label, cor, atual):
+    """monta a série diária alinhada por dia do lançamento (D1 = primeira venda)"""
+    df = df.sort_values("date")
+    ini = df["date"].min().normalize()
+    df = df.assign(_dia=(df["date"].dt.normalize() - ini).dt.days + 1)
+
+    g = df.groupby("_dia").agg(v=("price", "count"), r=("price", "sum")).reset_index()
+    ndias = int(g["_dia"].max())
+    vendas = [0]*ndias; receita = [0.0]*ndias
+    for _, row in g.iterrows():
+        vendas[int(row["_dia"])-1] = int(row["v"])
+        receita[int(row["_dia"])-1] = round(float(row["r"]), 2)
+    cum_v, cum_r, av, ar = [], [], 0, 0.0
+    for i in range(ndias):
+        av += vendas[i]; ar += receita[i]
+        cum_v.append(av); cum_r.append(round(ar, 2))
+
+    # data de calendário de cada dia do lançamento
+    datas = [(ini + pd.Timedelta(days=i)).strftime("%d/%m") for i in range(ndias)]
+
+    # pagamento e canal
+    def _agg(serie, label_vazio):
+        s = _txt(serie).str.strip().replace({"": label_vazio, "nan": label_vazio})
+        a = df.assign(_k=s).groupby("_k").agg(v=("price", "count"), r=("price", "sum")).reset_index().sort_values("v", ascending=False)
+        return [{"n": str(x["_k"]), "v": int(x["v"]), "r": round(float(x["r"]), 2)} for _, x in a.iterrows()]
+
+    pgto_s = _txt(df["pgto_raw"]).apply(_norm_pgto)
+    canal_s = _txt(df["sck"]).str.split("|").str[0]
+
+    # vendas por hora do dia (padrão de horário de compra)
+    horas = [0]*24
+    for h in df["date"].dt.hour:
+        horas[int(h)] += 1
+
+    tot_v = int(len(df)); tot_r = round(float(df["price"].sum()), 2)
+    return {
+        "cod": cod, "label": label, "cor": cor, "atual": bool(atual),
+        "ini": ini.strftime("%d/%m/%Y"), "fim": df["date"].max().strftime("%d/%m/%Y"),
+        "dias": ndias, "vendas": tot_v, "receita": tot_r,
+        "ticket": round(tot_r/tot_v, 2) if tot_v else 0,
+        "pico": {"dia": int(vendas.index(max(vendas)))+1, "v": max(vendas)} if vendas else None,
+        "serie": {"datas": datas, "vendas": vendas, "receita": receita, "cum_v": cum_v, "cum_r": cum_r},
+        "pgto": _agg(pgto_s, "Outro"), "canal": _agg(canal_s, "Sem rastreio"), "horas": horas,
+    }
+
+def lancamentos_data():
+    print("  Lendo lançamentos anteriores...")
+    out = []
+    for cfg in LANCAMENTOS_COMPARAR:
+        aba = cfg["aba"]
+        try:
+            df = pd.read_csv(sheet_url(aba))
+        except Exception as e:
+            print(f"     ✗ {cfg['cod']}: aba '{aba}' ilegível ({type(e).__name__})"); continue
+        df, faltando, _ = _map_hotmart_cols(df)
+        if faltando:
+            print(f"     ✗ {cfg['cod']}: faltam colunas {faltando} na aba '{aba}'"); continue
+        for opc in ("status", "sck", "pgto_raw"):
+            if opc not in df.columns: df[opc] = ""
+
+        _amostra = _txt(df["date"]).str.strip()
+        _iso = _amostra.str.match(r"^\d{4}-\d{2}-\d{2}").fillna(False).mean() > 0.5
+        df["date"] = pd.to_datetime(df["date"], errors="coerce", dayfirst=not _iso)
+        df["price"] = to_num(df["price"])
+        df = _aplicar_preco_fixo(df, aba)
+        df = df.dropna(subset=["date"])
+
+        st = _txt(df["status"]).str.strip().str.upper()
+        aprovados = ["APPROVED", "COMPLETE", "COMPLETED", "APROVADO", "APROVADA", "COMPLETO", "PAGO", "PAID"]
+        if st.isin(aprovados).any(): df = df[st.isin(aprovados)]
+        if VENDA_VALOR_MIN > 0:
+            antes = len(df); df = df[df["price"] >= VENDA_VALOR_MIN]
+            if antes != len(df): print(f"     {cfg['cod']}: {antes-len(df)} venda(s) abaixo de R${VENDA_VALOR_MIN} ignorada(s)")
+        if len(df) == 0:
+            print(f"     ⚠ {cfg['cod']}: sem vendas válidas na aba '{aba}'"); continue
+
+        s = _serie_lancamento(df, cfg["cod"], cfg.get("label", cfg["cod"]), cfg.get("cor", "#94a3b8"), cfg.get("atual", False))
+        out.append(s)
+        print(f"     ✓ {cfg['cod']}: {s['vendas']} vendas | R${s['receita']:,.2f} | {s['dias']} dia(s) | início {s['ini']}")
+
+    if not out:
+        print("  ⚠ Nenhum lançamento com dados — menu Comparativo não aparecerá."); return None
+    return {"lista": out}
 
 # ══ PESQUISA ══════════════════════════════════════════
 def load_pesquisa():
@@ -661,7 +907,7 @@ def build_comp_data(df):
         },
     }
 
-def inject_all(tpl, meta_k, meta_d, meta_dc, meta_raw_c, meta_t, meta_bd, pes, hotmart, comp_data=None):
+def inject_all(tpl, meta_k, meta_d, meta_dc, meta_raw_c, meta_t, meta_bd, pes, hotmart, comp_data=None, lancs=None):
     html=Path(tpl).read_text(encoding="utf-8")
     html=replace_js_const(html,"META_KPIS",     meta_k)
     html=replace_js_const(html,"META_DAILY",     meta_d)
@@ -671,6 +917,7 @@ def inject_all(tpl, meta_k, meta_d, meta_dc, meta_raw_c, meta_t, meta_bd, pes, h
     html=replace_js_const(html,"META_BD",        meta_bd)
     html=replace_js_const(html,"PESQUISA", pes if USAR_PESQUISA else False)
     html=replace_js_const(html,"HOTMART", hotmart if USAR_VENDAS else False)
+    html=replace_js_const(html,"LANCAMENTOS", lancs if USAR_COMPARATIVO else False)
     if comp_data is not None:
         html=replace_js_const(html,"COMP_DATA", comp_data)
     html=replace_js_const(html,"DATA_GERACAO", date.today().strftime("%Y-%m-%d"))
@@ -718,9 +965,14 @@ def main():
     print("\n[HOTMART]")
     if USAR_VENDAS:
         hotmart=hotmart_data()
+        if hotmart is None:
+            print("  ⚠⚠ USAR_VENDAS=True porém sem dados → menu Vendas NÃO aparecerá no dashboard.")
     else:
         hotmart=None
         print("  (desativado)")
+
+    print("\n[COMPARATIVO]")
+    lancs = lancamentos_data() if USAR_COMPARATIVO else None
 
     print("\n[COMPARAÇÃO LP + CTV]")
     try:
@@ -737,7 +989,7 @@ def main():
     print("\n[HTML]")
     if not Path(TEMPLATE_FILE).exists():
         print(f"  ERRO: {TEMPLATE_FILE} não encontrado"); return
-    html=inject_all(TEMPLATE_FILE,m_k,m_d,m_dc,m_raw,m_t,m_bd,pes,hotmart,comp_data)
+    html=inject_all(TEMPLATE_FILE,m_k,m_d,m_dc,m_raw,m_t,m_bd,pes,hotmart,comp_data,lancs)
     Path(OUTPUT_FILE).write_text(html,encoding="utf-8")
     print(f"  ✓ {OUTPUT_FILE} ({len(html)//1024}KB)")
 
