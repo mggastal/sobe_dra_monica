@@ -197,6 +197,9 @@ details.desk-only{display:block!important;}
   .pizza-grid{grid-template-columns:1fr;}
   .tc{overflow-x:auto;}
   #vendasHoraGrid{grid-template-columns:1fr!important;}
+  #cmpLctKpis{grid-template-columns:1fr!important;}
+  #cmpModoPills{width:100%;justify-content:flex-start;}
+  #cmpTblDias table{min-width:420px;}
   #vendasHoraGrid>div canvas{max-height:90px;}
   .utm-groups{grid-template-columns:1fr;}
   .pes-kpis{grid-template-columns:1fr 1fr;}
@@ -290,6 +293,7 @@ details.desk-only{display:block!important;}
       <div id="sbVendasLabel" style="font-size:9px;font-weight:700;color:rgba(255,255,255,.25);text-transform:uppercase;letter-spacing:1.5px;padding:12px 10px 4px">Vendas</div>
       <button class="sb-item" id="sbVendas" onclick="goPage('vendas',this)"><span class="ico">💰</span>Visão Geral</button>
       <button class="sb-item" onclick="goPage('vendas-lista',this)"><span class="ico">📋</span>Vendas Diárias</button>
+      <button class="sb-item" id="sbComparativo" onclick="goPage('comparativo',this)"><span class="ico">📊</span>Comparativo</button>
     </div>
   </nav>
   <div class="sb-lct"><div class="sb-lct-lbl">Lançamento</div><div class="sb-lct-val" id="sbLct">—</div></div>
@@ -531,6 +535,61 @@ details.desk-only{display:block!important;}
       </div>
     </div>
 
+    <!-- COMPARATIVO DE LANÇAMENTOS -->
+    <div class="page-section" id="page-comparativo">
+      <div style="margin-bottom:16px">
+        <div style="font-size:17px;font-weight:700">Comparativo de Lançamentos</div>
+        <div style="font-size:12px;color:var(--muted)" id="cmpSub">Alinhados pelo dia de abertura do carrinho</div>
+      </div>
+      <div style="margin:4px 0 14px;padding:10px 14px;background:var(--surface2);border-left:3px solid var(--muted2);border-radius:var(--r)">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Período completo</div>
+        <div style="font-size:11px;color:var(--muted2)">Esta página ignora o filtro de data do topo — cada lançamento entra com o seu período inteiro, alinhado por <b>D1 = primeiro dia de vendas</b>.</div>
+      </div>
+
+      <!-- KPIs por lançamento -->
+      <div id="cmpLctKpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:14px"></div>
+
+      <!-- Ritmo: mesmo dia de lançamento -->
+      <div id="cmpRitmo" class="cc mb14"></div>
+
+      <!-- Gráfico principal -->
+      <div class="cc mb14">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+          <div>
+            <div class="cc-t">Vendas por Dia do Lançamento</div>
+            <div class="cc-s">Linhas sobrepostas · D1 = abertura do carrinho de cada lançamento</div>
+          </div>
+          <div id="cmpModoPills" style="display:inline-flex;gap:2px;background:var(--surface2);padding:3px;border-radius:8px;border:1px solid var(--border);flex-wrap:wrap">
+            <button class="pb active" onclick="setCmpModo('vendas',this)">Vendas/dia</button>
+            <button class="pb" onclick="setCmpModo('acum',this)">Acumulado</button>
+            <button class="pb" onclick="setCmpModo('receita',this)">Receita/dia</button>
+            <button class="pb" onclick="setCmpModo('receita_acum',this)">Receita acum.</button>
+          </div>
+        </div>
+        <div class="cw" style="height:270px"><canvas id="chCmpLct"></canvas></div>
+      </div>
+
+      <!-- Pagamento e canal -->
+      <div class="g2 mb14">
+        <div class="cc">
+          <div class="cc-t">Método de Pagamento</div>
+          <div class="cc-s">Participação em cada lançamento</div>
+          <div style="overflow-x:auto"><div id="cmpPgto" style="margin-top:10px;min-width:240px"></div></div>
+        </div>
+        <div class="cc">
+          <div class="cc-t">Canal de Origem (SCK)</div>
+          <div class="cc-s">Último clique antes da compra</div>
+          <div style="overflow-x:auto"><div id="cmpCanal" style="margin-top:10px;min-width:240px"></div></div>
+        </div>
+      </div>
+
+      <!-- Tabela dia a dia -->
+      <div class="section">
+        <div class="sec-hd">Dia a Dia · vendas (acumulado)</div>
+        <div class="tc" id="cmpTblDias"></div>
+      </div>
+    </div>
+
   </div>
 </main>
 </div>
@@ -548,6 +607,7 @@ const DATA_GERACAO     = null;
 const META_BD     = null;
 const PESQUISA     = null;
 const HOTMART      = null;
+const LANCAMENTOS  = null;
 const COMP_DATA    = null;
 
 // ═══ CONFIG ═══
@@ -1956,6 +2016,7 @@ function rerenderActive(){
   if(p==='comp')     renderComp();
   if(p==='vendas')     renderVendas();
   if(p==='vendas-lista') renderVendasLista();
+  if(p==='comparativo')  renderComparativo();
   setTimeout(()=>{Object.values({...CH,...PC}).forEach(c=>{try{c.resize();}catch(e){}});},60);
 }
 
@@ -2121,12 +2182,156 @@ function renderComp(){
     campBox(C_IMG,'🖼️ IMG',img.camps)+campBox(C_VD,'🎬 VD',vd.camps);
 }
 
+
+// ═══ COMPARATIVO DE LANÇAMENTOS ═══
+let cmpModo='vendas';
+function setCmpModo(m,btn){
+  cmpModo=m;
+  document.querySelectorAll('#cmpModoPills .pb').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  renderComparativo();
+}
+function cmpDelta(atual,ref){
+  if(ref==null||ref===0) return '<span style="font-size:10px;color:var(--muted2)">—</span>';
+  const d=((atual-ref)/ref)*100;
+  const cor=d>0?'#059669':(d<0?'#dc2626':'var(--muted)');
+  return '<span style="font-size:10px;font-weight:700;color:'+cor+'">'+(d>0?'+':'')+d.toFixed(0)+'%</span>';
+}
+function renderComparativo(){
+  if(!LANCAMENTOS||!LANCAMENTOS.lista||!LANCAMENTOS.lista.length) return;
+  const L=LANCAMENTOS.lista;
+  const maxD=Math.max.apply(null,L.map(l=>l.dias));
+  const labels=Array.from({length:maxD},(_,i)=>'D'+(i+1));
+  const atual=L.filter(l=>l.atual)[0]||L[L.length-1];
+  const dAt=atual.dias;
+
+  document.getElementById('cmpSub').textContent=
+    L.map(l=>l.cod+' ('+l.vendas+' vendas)').join('  ×  ');
+
+  // ── KPIs por lançamento ──
+  document.getElementById('cmpLctKpis').innerHTML=L.map(l=>{
+    const badge=l.atual?'<span style="font-size:8px;font-weight:700;background:'+l.cor+'22;color:'+l.cor+';padding:2px 6px;border-radius:4px;letter-spacing:.5px">EM ANDAMENTO</span>':'';
+    return '<div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid '+l.cor+';border-radius:var(--r);padding:12px 14px;box-shadow:var(--sh)">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:8px">'+
+        '<div style="font-size:11px;font-weight:700;color:'+l.cor+'">'+l.label+'</div>'+badge+'</div>'+
+      '<div style="font-size:22px;font-weight:700;line-height:1;margin-bottom:2px">'+fN(l.vendas)+'</div>'+
+      '<div style="font-size:10px;color:var(--muted);margin-bottom:8px">vendas aprovadas</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 8px;font-size:10px">'+
+        '<div><div style="color:var(--muted2)">Receita</div><div style="font-weight:700;font-family:\'DM Mono\',monospace">'+fR(l.receita)+'</div></div>'+
+        '<div><div style="color:var(--muted2)">Ticket médio</div><div style="font-weight:700;font-family:\'DM Mono\',monospace">'+fR(l.ticket)+'</div></div>'+
+        '<div><div style="color:var(--muted2)">Período</div><div style="font-weight:600">'+l.ini+' → '+l.fim+'</div></div>'+
+        '<div><div style="color:var(--muted2)">Pico</div><div style="font-weight:600">D'+l.pico.dia+' · '+l.pico.v+' vendas</div></div>'+
+      '</div></div>';
+  }).join('');
+
+  // ── Ritmo: todos no mesmo dia do lançamento ──
+  function ate(l,d){const i=Math.min(d,l.dias)-1;return {v:l.serie.cum_v[i],r:l.serie.cum_r[i],completo:l.dias>=d};}
+  const aAt=ate(atual,dAt);
+  let ritmo='<div class="cc-t">Ritmo até o D'+dAt+'</div>'+
+    '<div class="cc-s">Comparação no mesmo ponto da jornada — '+atual.cod+' está no dia '+dAt+' de vendas</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:12px">';
+  L.forEach(l=>{
+    const a=ate(l,dAt);
+    const eh=l.cod===atual.cod;
+    ritmo+='<div style="padding:10px 12px;border-radius:var(--r);background:var(--surface2);border:1px solid '+(eh?l.cor+'55':'var(--border)')+'">'+
+      '<div style="font-size:10px;font-weight:700;color:'+l.cor+';margin-bottom:4px">'+l.cod+(a.completo?'':' <span style="color:var(--muted2);font-weight:400">(só '+l.dias+'d)</span>')+'</div>'+
+      '<div style="font-size:18px;font-weight:700">'+fN(a.v)+'</div>'+
+      '<div style="font-size:10px;color:var(--muted);margin-bottom:4px">vendas até o D'+dAt+'</div>'+
+      '<div style="font-size:10px;font-family:\'DM Mono\',monospace;color:var(--muted2);margin-bottom:'+(eh?'0':'4px')+'">'+fR(a.r)+'</div>'+
+      (eh?'':'<div style="font-size:9px;color:var(--muted2);border-top:1px dashed var(--border);padding-top:4px">'+atual.cod+' '+cmpDelta(aAt.v,a.v)+' vs. este</div>')+
+    '</div>';
+  });
+  ritmo+='</div>';
+  if(L.length>1) ritmo+='<div style="font-size:10px;color:var(--muted2);margin-top:10px">O percentual compara '+atual.cod+' com cada lançamento anterior no mesmo dia de carrinho.</div>';
+  document.getElementById('cmpRitmo').innerHTML=ritmo;
+
+  // ── Gráfico ──
+  const campo={vendas:'vendas',acum:'cum_v',receita:'receita',receita_acum:'cum_r'}[cmpModo];
+  const acumulado=(cmpModo==='acum'||cmpModo==='receita_acum');
+  const dinheiro=(cmpModo==='receita'||cmpModo==='receita_acum');
+  const ds=L.map(l=>{
+    const base=l.serie[campo];
+    const data=[];
+    for(let i=0;i<maxD;i++){
+      if(i<base.length) data.push(base[i]);
+      else data.push(acumulado&&!l.atual?base[base.length-1]:null);
+    }
+    return {label:l.label,data,borderColor:l.cor,backgroundColor:l.cor+'18',
+      borderWidth:l.atual?3:2,borderDash:l.atual?[]:[5,4],
+      pointRadius:l.atual?3:2,pointHoverRadius:6,pointBackgroundColor:l.cor,
+      tension:.3,fill:false,spanGaps:false,datalabels:{display:false},_l:l};
+  });
+  dc('chCmpLct');
+  CH['chCmpLct']=new Chart(document.getElementById('chCmpLct'),{
+    type:'line',data:{labels,datasets:ds},
+    options:bo({plugins:{
+      legend:{labels:{color:TXT(),font:bf,boxWidth:9,padding:8,usePointStyle:true}},
+      datalabels:{display:false},
+      tooltip:{backgroundColor:DARK()?'#1a2236':'#0f1523',borderColor:'rgba(255,255,255,.08)',borderWidth:1,
+        titleFont:{size:10},bodyFont:{size:10},
+        callbacks:{
+          title:it=>'Dia '+(it[0].dataIndex+1)+' do lançamento',
+          label:ctx=>{
+            const l=ctx.dataset._l, i=ctx.dataIndex;
+            const dt=l.serie.datas[i]?' ('+l.serie.datas[i]+')':'';
+            if(ctx.raw==null) return null;
+            return ' '+l.cod+dt+': '+(dinheiro?fR(ctx.raw):fN(ctx.raw)+(acumulado?' acum.':' venda'+(ctx.raw!==1?'s':'')));
+          }
+        }}},
+      scales:{x:{ticks:{color:TXT(),font:bf,maxTicksLimit:20},grid:{color:GRID()}},
+              y:{beginAtZero:true,ticks:{color:TXT(),font:bf,callback:v=>dinheiro?'R$'+Number(v).toLocaleString('pt-BR'):v},grid:{color:GRID()}}}
+    })
+  });
+
+  // ── Pagamento / Canal ──
+  function blocoDist(elId,chave,limite){
+    const nomes={};
+    L.forEach(l=>(l[chave]||[]).forEach(x=>{nomes[x.n]=(nomes[x.n]||0)+x.v;}));
+    const ordem=Object.keys(nomes).sort((a,b)=>nomes[b]-nomes[a]).slice(0,limite);
+    let h='<table style="width:100%;border-collapse:collapse;min-width:0"><thead><tr>'+
+      '<th style="font-size:9px;text-align:left;padding:5px 6px;color:var(--muted);text-transform:uppercase">'+(chave==='pgto'?'Método':'Canal')+'</th>'+
+      L.map(l=>'<th class="num" style="font-size:9px;padding:5px 6px;color:'+l.cor+';text-transform:uppercase">'+l.cod+'</th>').join('')+
+      '</tr></thead><tbody>';
+    ordem.forEach(n=>{
+      h+='<tr style="border-top:1px solid var(--border)"><td style="font-size:11px;padding:6px;font-weight:600;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+n+'">'+n+'</td>';
+      L.forEach(l=>{
+        const it=(l[chave]||[]).filter(x=>x.n===n)[0];
+        const pct=it&&l.vendas?((it.v/l.vendas)*100).toFixed(0)+'%':'—';
+        h+='<td class="num" style="font-size:11px;padding:6px"><span style="font-weight:700">'+(it?it.v:'—')+'</span>'+
+           (it?'<span style="font-size:9px;color:var(--muted2)"> · '+pct+'</span>':'')+'</td>';
+      });
+      h+='</tr>';
+    });
+    document.getElementById(elId).innerHTML=h+'</tbody></table>';
+  }
+  blocoDist('cmpPgto','pgto',6);
+  blocoDist('cmpCanal','canal',8);
+
+  // ── Tabela dia a dia ──
+  let t='<table><thead><tr><th>Dia</th>'+
+    L.map(l=>'<th class="num" style="color:'+l.cor+'">'+l.cod+'</th>').join('')+'</tr></thead><tbody>';
+  for(let i=0;i<maxD;i++){
+    t+='<tr><td style="font-size:11px;padding:6px 10px;font-weight:700">D'+(i+1)+'</td>';
+    L.forEach(l=>{
+      if(i>=l.dias){ t+='<td class="num" style="font-size:11px;padding:6px 10px;color:var(--muted2)">—</td>'; return; }
+      const v=l.serie.vendas[i], ac=l.serie.cum_v[i], dt=l.serie.datas[i];
+      t+='<td class="num" style="font-size:11px;padding:6px 10px" title="'+dt+'">'+
+         '<span style="font-weight:700;color:'+(v>0?'var(--text)':'var(--muted2)')+'">'+v+'</span>'+
+         '<span style="font-size:9px;color:var(--muted2)"> ('+ac+')</span></td>';
+    });
+    t+='</tr>';
+  }
+  t+='<tr style="border-top:2px solid var(--border);background:var(--surface2)"><td style="font-size:11px;padding:7px 10px;font-weight:700">Total</td>'+
+     L.map(l=>'<td class="num" style="font-size:11px;padding:7px 10px;font-weight:700;color:'+l.cor+'">'+fN(l.vendas)+'</td>').join('')+'</tr>';
+  document.getElementById('cmpTblDias').innerHTML=t+'</tbody></table>';
+}
+
 function goPage(p,btn){
   document.querySelectorAll('.page-section').forEach(e=>e.classList.remove('active'));
   document.querySelectorAll('.sb-item').forEach(e=>e.classList.remove('active'));
   document.getElementById('page-'+p).classList.add('active');
   if(btn) btn.classList.add('active');
-  const titles={meta:'Meta Ads',diario:'Métricas Diárias',pesquisa:'Pesquisa',vendas:'Vendas','vendas-lista':'Vendas Diárias',comp:'Comparar LP e CTV'};
+  const titles={meta:'Meta Ads',diario:'Métricas Diárias',pesquisa:'Pesquisa',vendas:'Vendas','vendas-lista':'Vendas Diárias',comparativo:'Comparativo de Lançamentos',comp:'Comparar LP e CTV'};
   document.getElementById('pageTitle').textContent=titles[p]||p;
   if(p==='meta')     renderMeta();
   if(p==='diario')   renderDiario();
@@ -2134,6 +2339,7 @@ function goPage(p,btn){
   if(p==='comp')     renderComp();
   if(p==='vendas')     renderVendas();
   if(p==='vendas-lista') renderVendasLista();
+  if(p==='comparativo')  renderComparativo();
   setTimeout(()=>{Object.values({...CH,...PC}).forEach(c=>{try{c.resize();}catch(e){}});},80);
   if(window.innerWidth<=768) closeSb();
 }
@@ -2194,8 +2400,15 @@ window.addEventListener('resize', ajustarPaddingContent);
     if(pgP) pgP.style.display='none';
   }
   // Vendas: mostrar menu só se HOTMART tiver dados
+  const temVendas=(HOTMART&&HOTMART!==false), temCmp=(LANCAMENTOS&&LANCAMENTOS!==false&&LANCAMENTOS.lista&&LANCAMENTOS.lista.length);
   const sbVG=document.getElementById('sbVendasGroup');
-  if(sbVG) sbVG.style.display=(HOTMART&&HOTMART!==false)?'block':'none';
+  if(sbVG) sbVG.style.display=(temVendas||temCmp)?'block':'none';
+  if(!temVendas){
+    const sbV=document.getElementById('sbVendas'); if(sbV) sbV.style.display='none';
+    document.querySelectorAll("[onclick*=\"goPage('vendas-lista'\"]").forEach(b=>b.style.display='none');
+  }
+  const sbC=document.getElementById('sbComparativo');
+  if(sbC) sbC.style.display=temCmp?'flex':'none';
   renderMeta();
   ajustarPaddingContent();
 })();
