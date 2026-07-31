@@ -33,9 +33,21 @@ VENDA_VALOR_MIN  = 0
 
 # Valor fixo por produto (substitui o preço da planilha, que traz juros de parcelamento).
 # Aplicado só nas abas listadas em PRECO_FIXO_ABAS. Deixe {} para usar o preço da planilha.
+#
+# O valor pode ser:
+#   • um número            → mesmo preço para todas as datas
+#   • uma lista de faixas  → preço muda conforme a data da venda:
+#       {"ate": "24/07/2026", "valor": 1429.10}                       # até 24/07 (aberto no início)
+#       {"de": "25/07/2026", "ate": "02/08/2026", "valor": 1790.00}   # 25/07 a 02/08 (inclusive)
+#     "de"/"ate" são opcionais (ausência = sem limite). Datas no formato dd/mm/aaaa.
+#     Venda fora de todas as faixas usa a faixa mais próxima e imprime um aviso.
 PRECO_FIXO = {
     "De frente com Dra Monica": 1710.90,
-    "Checklist: O passo a passo para garantir a segurança do seu consultório": 1429.10,
+    "Checklist: O passo a passo para garantir a segurança do seu consultório": [
+        {"ate": "24/07/2026", "valor": 1429.10},                      # promo de abertura
+        {"de": "25/07/2026", "ate": "02/08/2026", "valor": 1790.00},  # sem promo
+        # downsell 03/08–20/08 é OUTRO produto → entra como nova chave aqui quando você mandar
+    ],
 }
 PRECO_FIXO_ABAS = ["hotmart"]   # abas onde PRECO_FIXO vale (o lançamento ao vivo)
 
@@ -377,21 +389,55 @@ def _norm_pgto(m):
     if s in ("", "NAN", "NONE"):                          return "Outro"
     return "Cartão de Crédito"
 
+def _preco_fixo_produto(produto, data):
+    """Preço fixo para (produto, data) ou None se o produto não está em PRECO_FIXO.
+    Aceita número (fixo sempre) ou lista de faixas {de?, ate?, valor}. Devolve
+    (valor, fora_da_faixa) — fora_da_faixa=True quando a data não caiu em nenhuma faixa."""
+    regra = PRECO_FIXO.get(produto)
+    if regra is None:
+        return None, False
+    if not isinstance(regra, (list, tuple)):
+        return float(regra), False
+    d = pd.to_datetime(data, errors="coerce")
+    if pd.isna(d):
+        return float(regra[0]["valor"]), True
+    d = d.normalize()
+    faixas = []
+    for f in regra:
+        de  = pd.to_datetime(f["de"],  dayfirst=True, errors="coerce").normalize() if f.get("de")  else pd.Timestamp.min
+        ate = pd.to_datetime(f["ate"], dayfirst=True, errors="coerce").normalize() if f.get("ate") else pd.Timestamp.max
+        faixas.append((de, ate, float(f["valor"])))
+    faixas.sort(key=lambda x: x[0])
+    for de, ate, val in faixas:
+        if de <= d <= ate:
+            return val, False
+    # fora de todas as faixas → usa a mais próxima e sinaliza
+    return (faixas[0][2] if d < faixas[0][0] else faixas[-1][2]), True
+
 def _aplicar_preco_fixo(df, aba):
-    """Se a aba está em PRECO_FIXO_ABAS, substitui price pelo valor fixo do produto.
-    Produtos sem entrada em PRECO_FIXO mantêm o preço original da planilha."""
+    """Se a aba está em PRECO_FIXO_ABAS, substitui price pelo valor fixo do produto,
+    resolvido pela data da venda. Produtos sem regra mantêm o preço da planilha."""
     if not PRECO_FIXO or aba not in PRECO_FIXO_ABAS or "produto" not in df.columns:
         return df
-    prod = _txt(df["produto"]).str.strip()
-    fixo = prod.map(PRECO_FIXO)
-    n = int(fixo.notna().sum())
     df = df.copy()
-    df["price"] = fixo.where(fixo.notna(), df["price"])
-    achou = sorted(set(prod[fixo.notna()]))
-    faltou = sorted(set(prod[fixo.isna()]) - {"", "nan"})
-    print(f"     preço fixo aplicado em {n} venda(s): {achou}")
-    if faltou:
-        print(f"     ⚠ produtos SEM preço fixo (usando valor da planilha): {faltou}")
+    prod = _txt(df["produto"]).str.strip()
+    precos = df["price"].astype(float).tolist()
+    aplicados, sem_regra, fora = 0, set(), []
+    for i, (p, d) in enumerate(zip(prod, df["date"])):
+        val, foraFaixa = _preco_fixo_produto(p, d)
+        if val is not None:
+            precos[i] = val; aplicados += 1
+            if foraFaixa:
+                fora.append((p, d))
+        elif p and p != "nan":
+            sem_regra.add(p)
+    df["price"] = precos
+    print(f"     preço fixo aplicado em {aplicados} venda(s)")
+    if fora:
+        exemplos = sorted({(p[:30], (pd.to_datetime(d, errors='coerce').strftime('%d/%m') if pd.notna(pd.to_datetime(d, errors='coerce')) else '?')) for p, d in fora})
+        print(f"     ⚠ {len(fora)} venda(s) fora das faixas de data (usei a faixa mais próxima): {exemplos[:5]}")
+    if sem_regra:
+        print(f"     ⚠ produtos SEM preço fixo (usando valor da planilha): {sorted(sem_regra)}")
     return df
 
 def _map_hotmart_cols(df):
