@@ -289,11 +289,20 @@ details.desk-only{display:block!important;}
     <button class="sb-item" onclick="goPage('diario',this)"><span class="ico">📈</span>Métricas Diárias</button>
     <button class="sb-item" onclick="goPage('comp',this)"><span class="ico">⚖️</span>Comparar LP e CTV</button>
     <button class="sb-item" id="sbPesquisa" onclick="goPage('pesquisa',this)"><span class="ico">🔍</span>Pesquisa</button>
+    <div id="sbTotaisGroup" style="display:none">
+      <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,.25);text-transform:uppercase;letter-spacing:1.5px;padding:12px 10px 4px">Vendas Totais</div>
+      <button class="sb-item" id="sbTotais" onclick="goPage('total',this)"><span class="ico">🧮</span>Consolidado</button>
+    </div>
     <div id="sbVendasGroup" style="display:none">
-      <div id="sbVendasLabel" style="font-size:9px;font-weight:700;color:rgba(255,255,255,.25);text-transform:uppercase;letter-spacing:1.5px;padding:12px 10px 4px">Vendas</div>
+      <div id="sbVendasLabel" style="font-size:9px;font-weight:700;color:rgba(255,255,255,.25);text-transform:uppercase;letter-spacing:1.5px;padding:12px 10px 4px">Vendas (produtos principais)</div>
       <button class="sb-item" id="sbVendas" onclick="goPage('vendas',this)"><span class="ico">💰</span>Visão Geral</button>
       <button class="sb-item" onclick="goPage('vendas-lista',this)"><span class="ico">📋</span>Vendas Diárias</button>
       <button class="sb-item" id="sbComparativo" onclick="goPage('comparativo',this)"><span class="ico">📊</span>Comparativo</button>
+    </div>
+    <div id="sbDownsellGroup" style="display:none">
+      <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,.25);text-transform:uppercase;letter-spacing:1.5px;padding:12px 10px 4px">Downsell</div>
+      <button class="sb-item" id="sbDownsell" onclick="goPage('downsell',this)"><span class="ico">💰</span>Visão Geral</button>
+      <button class="sb-item" onclick="goPage('downsell-lista',this)"><span class="ico">📋</span>Vendas Diárias</button>
     </div>
   </nav>
   <div class="sb-lct"><div class="sb-lct-lbl">Lançamento</div><div class="sb-lct-val" id="sbLct">—</div></div>
@@ -590,6 +599,113 @@ details.desk-only{display:block!important;}
       </div>
     </div>
 
+    <!-- DOWNSELL · VISÃO GERAL -->
+    <div class="page-section" id="page-downsell">
+      <div style="margin-bottom:16px">
+        <div style="font-size:17px;font-weight:700">Downsell · Visão Geral</div>
+        <div style="font-size:12px;color:var(--muted)" id="dsSub">Vendas do produto de downsell</div>
+      </div>
+      <div style="margin:4px 0 14px;padding:10px 14px;background:var(--surface2);border-left:3px solid var(--muted2);border-radius:var(--r)">
+        <div style="font-size:11px;color:var(--muted2)">Sem métricas de investimento — a mídia foi aplicada no lançamento, não no downsell. Aqui só receita e nº de vendas por origem.</div>
+      </div>
+      <div id="dsKpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:14px"></div>
+      <div class="cc mb14">
+        <div class="cc-t">Vendas por Dia</div>
+        <div class="cc-s">Downsell · receita e nº de vendas</div>
+        <div class="cw" style="height:240px"><canvas id="chDsDia"></canvas></div>
+      </div>
+      <div class="g2 mb14">
+        <div class="cc">
+          <div class="cc-t">Método de Pagamento</div>
+          <div class="cc-s">Receita e nº de vendas</div>
+          <div id="dsPgto" style="margin-top:10px;overflow-x:auto"></div>
+        </div>
+        <div class="cc">
+          <div class="cc-t">Origem (SCK)</div>
+          <div class="cc-s">Último clique antes da compra</div>
+          <div id="dsCanal" style="margin-top:10px;overflow-x:auto"></div>
+        </div>
+      </div>
+      <div style="font-size:13px;font-weight:700;margin:2px 0 8px">Origens de captação (UTM)</div>
+      <div class="g2 mb14">
+        <div class="cc">
+          <div class="cc-t">Campanha</div>
+          <div class="cc-s">utm_campaign da captação</div>
+          <div id="dsUtm" style="margin-top:10px;overflow-x:auto"></div>
+        </div>
+        <div class="cc">
+          <div class="cc-t">Público</div>
+          <div class="cc-s">utm_medium da captação</div>
+          <div id="dsPublicos" style="margin-top:10px;overflow-x:auto"></div>
+        </div>
+      </div>
+      <div class="cc mb14">
+        <div class="cc-t">Criativo</div>
+        <div class="cc-s">utm_content da captação</div>
+        <div id="dsCriativos" style="margin-top:10px;overflow-x:auto"></div>
+      </div>
+    </div>
+
+    <!-- DOWNSELL · VENDAS DIÁRIAS -->
+    <div class="page-section" id="page-downsell-lista">
+      <div style="margin-bottom:16px">
+        <div style="font-size:17px;font-weight:700">Downsell · Vendas Diárias</div>
+        <div style="font-size:12px;color:var(--muted)">Todas as vendas do downsell</div>
+      </div>
+      <div style="margin-bottom:6px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:2px">Análise Diária</div>
+        <div style="font-size:11px;color:var(--muted2);margin-bottom:12px">Vendas acumuladas por horário em cada dia</div>
+        <div id="dsHoraGrid" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:18px;max-width:100%;overflow:hidden"></div>
+      </div>
+      <div class="cc mb14" style="padding:0">
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;min-width:700px">
+            <thead><tr style="background:var(--surface2)">
+              <th style="font-size:9px;padding:8px 12px;text-align:left;color:var(--muted);text-transform:uppercase;white-space:nowrap">Data</th>
+              <th style="font-size:9px;padding:8px 12px;text-align:left;color:var(--muted);text-transform:uppercase;white-space:nowrap">Nome</th>
+              <th style="font-size:9px;padding:8px 12px;text-align:left;color:var(--muted);text-transform:uppercase;white-space:nowrap">E-mail</th>
+              <th class="num" style="font-size:9px;padding:8px 12px;color:var(--muted);text-transform:uppercase;white-space:nowrap">Valor</th>
+              <th style="font-size:9px;padding:8px 12px;text-align:left;color:var(--muted);text-transform:uppercase;white-space:nowrap">Pagamento</th>
+              <th style="font-size:9px;padding:8px 12px;text-align:left;color:var(--muted);text-transform:uppercase;white-space:nowrap">Campanha</th>
+              <th style="font-size:9px;padding:8px 12px;text-align:left;color:var(--muted);text-transform:uppercase;white-space:nowrap">SCK</th>
+            </tr></thead>
+            <tbody id="tblDsListaBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- VENDAS TOTAIS -->
+    <div class="page-section" id="page-total">
+      <div style="margin-bottom:16px">
+        <div style="font-size:17px;font-weight:700">Vendas Totais</div>
+        <div style="font-size:12px;color:var(--muted)">Tudo somado — produtos principais + downsell</div>
+      </div>
+      <div id="totKpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:12px"></div>
+      <div id="totComp" style="margin-bottom:14px"></div>
+      <div class="cc mb14">
+        <div class="cc-t">Vendas por Dia</div>
+        <div class="cc-s">Todos os produtos · receita e nº de vendas</div>
+        <div class="cw" style="height:240px"><canvas id="chTotDia"></canvas></div>
+      </div>
+      <div class="section mb14">
+        <div class="sec-hd">Receita por Produto</div>
+        <div style="overflow-x:auto"><div id="totProdutos"></div></div>
+      </div>
+      <div class="g2 mb14">
+        <div class="cc">
+          <div class="cc-t">Método de Pagamento</div>
+          <div class="cc-s">Receita e nº de vendas</div>
+          <div id="totPgto" style="margin-top:10px;overflow-x:auto"></div>
+        </div>
+        <div class="cc">
+          <div class="cc-t">Origem (SCK)</div>
+          <div class="cc-s">Último clique antes da compra</div>
+          <div id="totCanal" style="margin-top:10px;overflow-x:auto"></div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </main>
 </div>
@@ -608,6 +724,8 @@ const META_BD     = null;
 const PESQUISA     = null;
 const HOTMART      = null;
 const LANCAMENTOS  = null;
+const DOWNSELL     = null;
+const TOTAIS       = null;
 const COMP_DATA    = null;
 
 // ═══ CONFIG ═══
@@ -2017,6 +2135,9 @@ function rerenderActive(){
   if(p==='vendas')     renderVendas();
   if(p==='vendas-lista') renderVendasLista();
   if(p==='comparativo')  renderComparativo();
+  if(p==='downsell')      renderDownsell();
+  if(p==='downsell-lista') renderDownsellLista();
+  if(p==='total')         renderTotal();
   setTimeout(()=>{Object.values({...CH,...PC}).forEach(c=>{try{c.resize();}catch(e){}});},60);
 }
 
@@ -2326,12 +2447,211 @@ function renderComparativo(){
   document.getElementById('cmpTblDias').innerHTML=t+'</tbody></table>';
 }
 
+
+// ═══ DOWNSELL ═══
+// Lista genérica de vendas (reusada por Vendas Diárias principal e downsell)
+function renderListaVendasGen(data, gridId, tbodyId, prefix){
+  if(!data?.vendas_raw?.length){
+    const tb=document.getElementById(tbodyId); if(tb) tb.innerHTML='';
+    const g=document.getElementById(gridId); if(g) g.innerHTML='<div style="color:var(--muted);font-size:12px;padding:8px">Sem vendas.</div>';
+    return;
+  }
+  const fRec=v=>'R$'+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const HL=getComputedStyle(document.documentElement).getPropertyValue('--hotmart').trim()||'#ff6b00';
+  const rows=data.vendas_raw;
+  const diasMap={};
+  rows.forEach(r=>{ if(!diasMap[r.dia]) diasMap[r.dia]=new Array(24).fill(0); if(r.hora>=0&&r.hora<24) diasMap[r.dia][r.hora]++; });
+  const dias=Object.keys(diasMap).sort();
+  const grid=document.getElementById(gridId);
+  if(grid){
+    Object.keys(CH).filter(k=>k.startsWith(prefix+'chHora_')).forEach(k=>{try{CH[k].destroy();}catch(e){}delete CH[k];});
+    grid.innerHTML='';
+    dias.forEach(dia=>{
+      const horas=diasMap[dia];
+      const total=horas.reduce((a,b)=>a+b,0);
+      const cumul=[];let acc=0; for(let h=0;h<24;h++){acc+=horas[h];cumul.push(acc);}
+      const id=prefix+'chHora_'+dia.replace('/','_');
+      const card=document.createElement('div');
+      card.style.cssText='background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px 10px 8px;box-shadow:var(--sh);min-width:0;overflow:hidden';
+      card.innerHTML='<div style="font-size:10px;font-weight:700;margin-bottom:6px;color:var(--text)">'+dia+' <span style="color:'+HL+';font-weight:700">'+total+' venda'+(total!==1?'s':'')+'</span></div><div style="height:100px"><canvas id="'+id+'"></canvas></div>';
+      grid.appendChild(card);
+      setTimeout(()=>{
+        const ctx=document.getElementById(id); if(!ctx) return;
+        const labels=Array.from({length:24},(_,i)=>i%4===0?String(i).padStart(2,'0')+'h':'');
+        CH[id]=new Chart(ctx,{type:'bar',
+          data:{labels,datasets:[
+            {type:'bar',data:horas,backgroundColor:HL+'55',borderRadius:2,yAxisID:'y',datalabels:{display:false}},
+            {type:'line',data:cumul,borderColor:HL,backgroundColor:'transparent',tension:.4,pointRadius:0,pointHoverRadius:5,borderWidth:2,yAxisID:'y2',datalabels:{display:false}}
+          ]},
+          options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+            plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{
+              title:ctx=>'Hora '+String(ctx[0].dataIndex).padStart(2,'0')+':00',
+              label:ctx=>ctx.datasetIndex===0?ctx.raw+' venda'+(ctx.raw!==1?'s nesta hora':''):ctx.raw+' acumulada'+(ctx.raw!==1?'s':'')
+            }}},
+            scales:{x:{ticks:{color:TXT(),font:{size:7},maxRotation:0},grid:{display:false}},
+              y:{ticks:{color:TXT(),font:{size:7},stepSize:1},grid:{color:GRID()},min:0,max:total||1},
+              y2:{display:false,min:0,max:total||1}}}
+        });
+      },50);
+    });
+  }
+  let html='';
+  rows.forEach(r=>{
+    html+='<tr style="border-bottom:1px solid var(--border)">'+
+      '<td style="font-size:11px;padding:7px 12px;white-space:nowrap;color:var(--muted)">'+r.d+'</td>'+
+      '<td style="font-size:11px;padding:7px 12px;white-space:nowrap;font-weight:600">'+r.nome+'</td>'+
+      '<td style="font-size:11px;padding:7px 12px;white-space:nowrap;color:var(--muted)">'+r.email+'</td>'+
+      '<td class="num" style="font-size:11px;padding:7px 12px;color:'+HL+';font-weight:700;white-space:nowrap">'+fRec(r.valor)+'</td>'+
+      '<td style="font-size:11px;padding:7px 12px;white-space:nowrap">'+r.pgto+'</td>'+
+      '<td style="font-size:10px;padding:7px 12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)" title="'+r.camp+'">'+r.camp+'</td>'+
+      '<td style="font-size:10px;padding:7px 12px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted2)" title="'+r.sck+'">'+r.sck+'</td>'+
+    '</tr>';
+  });
+  document.getElementById(tbodyId).innerHTML=html;
+}
+function renderDownsellLista(){ renderListaVendasGen(DOWNSELL,'dsHoraGrid','tblDsListaBody','ds_'); }
+
+// Tabela simples 2-métricas (Vendas + Receita), sem investimento
+function tblSimples(elId, data, colLbl, cor){
+  const el=document.getElementById(elId); if(!el) return;
+  cor=cor||getComputedStyle(document.documentElement).getPropertyValue('--hotmart').trim()||'#ff6b00';
+  if(!data?.length){ el.innerHTML='<div style="padding:12px;color:var(--muted);font-size:12px">Sem dados</div>'; return; }
+  const fR2=v=>v==null?'—':'R$'+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  let h='<table style="width:100%;border-collapse:collapse;min-width:220px"><thead><tr style="background:var(--surface2)">'+
+    '<th style="font-size:9px;padding:6px 10px;text-align:left;color:var(--muted);text-transform:uppercase">'+colLbl+'</th>'+
+    '<th class="num" style="font-size:9px;padding:6px 10px;color:var(--muted);text-transform:uppercase">Vendas</th>'+
+    '<th class="num" style="font-size:9px;padding:6px 10px;color:var(--muted);text-transform:uppercase">Receita</th></tr></thead><tbody>';
+  data.forEach(d=>{
+    h+='<tr style="border-top:1px solid var(--border)">'+
+      '<td style="font-size:11px;padding:6px 10px;font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+d.n+'">'+d.n+'</td>'+
+      '<td class="num" style="font-size:11px;padding:6px 10px;font-weight:700">'+d.v+'</td>'+
+      '<td class="num" style="font-size:11px;padding:6px 10px;color:'+cor+';font-weight:700">'+fR2(d.r)+'</td></tr>';
+  });
+  el.innerHTML=h+'</tbody></table>';
+}
+
+function renderDownsell(){
+  if(!DOWNSELL) return;
+  const D=DOWNSELL;
+  const fRec=v=>v==null?'—':'R$'+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const HL=getComputedStyle(document.documentElement).getPropertyValue('--hotmart').trim()||'#ff6b00';
+  const totV=D.daily.vendas.reduce((a,b)=>a+b,0);
+  const totR=D.daily.receita.reduce((a,b)=>a+b,0);
+  const ticket=totV>0?r2(totR/totV):null;
+
+  document.getElementById('dsSub').textContent=(D.vendas_raw&&D.vendas_raw.length)?('Produto de downsell · '+totV+' venda'+(totV!==1?'s':'')):'Vendas do produto de downsell';
+
+  document.getElementById('dsKpis').innerHTML=
+    '<div class="kpi" style="--kc:'+HL+'"><div class="kpi-lbl">Receita Bruta</div><div class="kpi-val" style="font-size:18px;color:'+HL+'">'+fRec(totR)+'</div><div class="kpi-sub">só downsell</div></div>'+
+    '<div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Vendas</div><div class="kpi-val">'+totV+'</div><div class="kpi-sub">transações aprovadas</div></div>'+
+    '<div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Ticket Médio</div><div class="kpi-val">'+fRec(ticket)+'</div><div class="kpi-sub">por venda</div></div>';
+
+  dc('chDsDia');
+  CH['chDsDia']=new Chart(document.getElementById('chDsDia'),{
+    data:{labels:D.daily.days,datasets:[
+      {label:'Vendas',data:D.daily.vendas,backgroundColor:HL+'bb',borderRadius:4,type:'bar',yAxisID:'y1',
+       datalabels:{display:ctx=>showLabels,color:HL,font:{size:labelSize,weight:'bold'},anchor:'end',align:'top',offset:2,clip:false}},
+      {label:'Receita',data:D.daily.receita,borderColor:'#059669',backgroundColor:'transparent',tension:.3,pointRadius:3,borderWidth:2,type:'line',yAxisID:'y2',spanGaps:true,datalabels:{display:false}},
+    ]},
+    options:{...bo(),scales:{
+      x:{ticks:{color:TXT(),font:bf},grid:{color:GRID()}},
+      y:{display:false,min:0},
+      y1:{position:'right',ticks:{color:HL,font:bf,stepSize:1},grid:{display:false},grace:'20%',min:0},
+      y2:{position:'right',ticks:{color:'#059669',font:bf,callback:v=>'R$'+v.toLocaleString('pt-BR')},grid:{display:false},offset:true,min:0},
+    }}
+  });
+
+  tblSimples('dsPgto',  D.pagamentos, 'Método', HL);
+  tblSimples('dsCanal', D.canal,      'Origem', HL);
+  tblSimples('dsUtm',       D.utm_camp,  'Campanha', HL);
+  tblSimples('dsPublicos',  D.publicos,  'Público',  HL);
+  tblSimples('dsCriativos', D.criativos, 'Criativo', HL);
+}
+
+
+// ═══ VENDAS TOTAIS ═══
+function renderTotal(){
+  if(!TOTAIS) return;
+  const T=TOTAIS;
+  const fRec=v=>v==null?'—':'R$'+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const HL=getComputedStyle(document.documentElement).getPropertyValue('--hotmart').trim()||'#ff6b00';
+  const totV=T.daily.vendas.reduce((a,b)=>a+b,0);
+  const totR=T.daily.receita.reduce((a,b)=>a+b,0);
+  const ticket=totV>0?r2(totR/totV):null;
+
+  document.getElementById('totKpis').innerHTML=
+    '<div class="kpi" style="--kc:'+HL+'"><div class="kpi-lbl">Receita Total</div><div class="kpi-val" style="font-size:18px;color:'+HL+'">'+fRec(totR)+'</div><div class="kpi-sub">principais + downsell</div></div>'+
+    '<div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Vendas Totais</div><div class="kpi-val">'+totV+'</div><div class="kpi-sub">transações aprovadas</div></div>'+
+    '<div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Ticket Médio</div><div class="kpi-val">'+fRec(ticket)+'</div><div class="kpi-sub">por venda</div></div>';
+
+  // Composição principais + downsell = total (nunca deixa o total solto)
+  const pV=(HOTMART&&HOTMART.daily)?HOTMART.daily.vendas.reduce((a,b)=>a+b,0):0;
+  const pR=(HOTMART&&HOTMART.daily)?HOTMART.daily.receita.reduce((a,b)=>a+b,0):0;
+  const dV=(DOWNSELL&&DOWNSELL.daily)?DOWNSELL.daily.vendas.reduce((a,b)=>a+b,0):0;
+  const dR=(DOWNSELL&&DOWNSELL.daily)?DOWNSELL.daily.receita.reduce((a,b)=>a+b,0):0;
+  function chip(lbl,v,r,cor){
+    return '<div style="flex:1;min-width:150px;padding:10px 12px;background:var(--surface2);border-radius:var(--r);border-left:3px solid '+cor+'">'+
+      '<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:700">'+lbl+'</div>'+
+      '<div style="font-size:15px;font-weight:700;font-family:\'DM Mono\',monospace">'+fRec(r)+'</div>'+
+      '<div style="font-size:10px;color:var(--muted2)">'+v+' venda'+(v!==1?'s':'')+'</div></div>';
+  }
+  document.getElementById('totComp').innerHTML=
+    '<div style="display:flex;gap:10px;align-items:stretch;flex-wrap:wrap">'+
+      chip('Produtos principais',pV,pR,HL)+
+      '<div style="display:flex;align-items:center;font-size:18px;color:var(--muted2);font-weight:700">+</div>'+
+      chip('Downsell',dV,dR,'#8b5cf6')+
+      '<div style="display:flex;align-items:center;font-size:18px;color:var(--muted2);font-weight:700">=</div>'+
+      chip('Total',totV,totR,'#059669')+
+    '</div>';
+
+  dc('chTotDia');
+  CH['chTotDia']=new Chart(document.getElementById('chTotDia'),{
+    data:{labels:T.daily.days,datasets:[
+      {label:'Vendas',data:T.daily.vendas,backgroundColor:HL+'bb',borderRadius:4,type:'bar',yAxisID:'y1',
+       datalabels:{display:ctx=>showLabels,color:HL,font:{size:labelSize,weight:'bold'},anchor:'end',align:'top',offset:2,clip:false}},
+      {label:'Receita',data:T.daily.receita,borderColor:'#059669',backgroundColor:'transparent',tension:.3,pointRadius:3,borderWidth:2,type:'line',yAxisID:'y2',spanGaps:true,datalabels:{display:false}},
+    ]},
+    options:{...bo(),scales:{
+      x:{ticks:{color:TXT(),font:bf},grid:{color:GRID()}},
+      y:{display:false,min:0},
+      y1:{position:'right',ticks:{color:HL,font:bf},grid:{display:false},grace:'20%',min:0},
+      y2:{position:'right',ticks:{color:'#059669',font:bf,callback:v=>'R$'+v.toLocaleString('pt-BR')},grid:{display:false},offset:true,min:0},
+    }}
+  });
+
+  // Receita por produto (a decomposição do total)
+  const prods=T.produtos||[];
+  let ph='<table style="width:100%;border-collapse:collapse;min-width:320px"><thead><tr style="background:var(--surface2)">'+
+    '<th style="font-size:9px;padding:6px 10px;text-align:left;color:var(--muted);text-transform:uppercase">Produto</th>'+
+    '<th class="num" style="font-size:9px;padding:6px 10px;color:var(--muted);text-transform:uppercase">Vendas</th>'+
+    '<th class="num" style="font-size:9px;padding:6px 10px;color:var(--muted);text-transform:uppercase">Receita</th>'+
+    '<th class="num" style="font-size:9px;padding:6px 10px;color:var(--muted);text-transform:uppercase">% Receita</th></tr></thead><tbody>';
+  const dsNomes=new Set((DOWNSELL&&DOWNSELL.vendas_raw)?[]:[]);
+  prods.forEach(p=>{
+    const pct=totR>0?(p.r/totR*100).toFixed(1)+'%':'—';
+    ph+='<tr style="border-top:1px solid var(--border)">'+
+      '<td style="font-size:11px;padding:6px 10px;font-weight:600;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+p.n+'">'+p.n+'</td>'+
+      '<td class="num" style="font-size:11px;padding:6px 10px;font-weight:700">'+p.v+'</td>'+
+      '<td class="num" style="font-size:11px;padding:6px 10px;color:'+HL+';font-weight:700">'+fRec(p.r)+'</td>'+
+      '<td class="num" style="font-size:11px;padding:6px 10px;color:var(--muted)">'+pct+'</td></tr>';
+  });
+  ph+='<tr style="border-top:2px solid var(--border);background:var(--surface2)">'+
+    '<td style="font-size:11px;padding:7px 10px;font-weight:700">Total</td>'+
+    '<td class="num" style="font-size:11px;padding:7px 10px;font-weight:700">'+totV+'</td>'+
+    '<td class="num" style="font-size:11px;padding:7px 10px;font-weight:700;color:'+HL+'">'+fRec(totR)+'</td>'+
+    '<td class="num" style="font-size:11px;padding:7px 10px;color:var(--muted)">100%</td></tr>';
+  document.getElementById('totProdutos').innerHTML=ph+'</tbody></table>';
+
+  tblSimples('totPgto',  T.pagamentos, 'Método', HL);
+  tblSimples('totCanal', T.canal,      'Origem', HL);
+}
+
 function goPage(p,btn){
   document.querySelectorAll('.page-section').forEach(e=>e.classList.remove('active'));
   document.querySelectorAll('.sb-item').forEach(e=>e.classList.remove('active'));
   document.getElementById('page-'+p).classList.add('active');
   if(btn) btn.classList.add('active');
-  const titles={meta:'Meta Ads',diario:'Métricas Diárias',pesquisa:'Pesquisa',vendas:'Vendas','vendas-lista':'Vendas Diárias',comparativo:'Comparativo de Lançamentos',comp:'Comparar LP e CTV'};
+  const titles={meta:'Meta Ads',diario:'Métricas Diárias',pesquisa:'Pesquisa',vendas:'Vendas','vendas-lista':'Vendas Diárias',comparativo:'Comparativo de Lançamentos','downsell':'Downsell · Visão Geral','downsell-lista':'Downsell · Vendas Diárias','total':'Vendas Totais',comp:'Comparar LP e CTV'};
   document.getElementById('pageTitle').textContent=titles[p]||p;
   if(p==='meta')     renderMeta();
   if(p==='diario')   renderDiario();
@@ -2340,6 +2660,9 @@ function goPage(p,btn){
   if(p==='vendas')     renderVendas();
   if(p==='vendas-lista') renderVendasLista();
   if(p==='comparativo')  renderComparativo();
+  if(p==='downsell')      renderDownsell();
+  if(p==='downsell-lista') renderDownsellLista();
+  if(p==='total')         renderTotal();
   setTimeout(()=>{Object.values({...CH,...PC}).forEach(c=>{try{c.resize();}catch(e){}});},80);
   if(window.innerWidth<=768) closeSb();
 }
@@ -2409,6 +2732,12 @@ window.addEventListener('resize', ajustarPaddingContent);
   }
   const sbC=document.getElementById('sbComparativo');
   if(sbC) sbC.style.display=temCmp?'flex':'none';
+  const temDs=(DOWNSELL&&DOWNSELL!==false&&DOWNSELL.vendas_raw&&DOWNSELL.vendas_raw.length);
+  const sbDG=document.getElementById('sbDownsellGroup');
+  if(sbDG) sbDG.style.display=temDs?'block':'none';
+  const temTot=(TOTAIS&&TOTAIS!==false&&TOTAIS.daily&&TOTAIS.daily.days&&TOTAIS.daily.days.length);
+  const sbTG=document.getElementById('sbTotaisGroup');
+  if(sbTG) sbTG.style.display=temTot?'block':'none';
   renderMeta();
   ajustarPaddingContent();
 })();
