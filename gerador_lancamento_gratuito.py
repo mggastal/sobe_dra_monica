@@ -43,6 +43,7 @@ VENDA_VALOR_MIN  = 0
 #     Venda fora de todas as faixas usa a faixa mais próxima e imprime um aviso.
 PRECO_FIXO = {
     "De frente com Dra Monica": 1710.90,
+    "Guia de Adequação à RDC 1002/2025": 97.00,   # downsell
     "Checklist: O passo a passo para garantir a segurança do seu consultório": [
         {"ate": "24/07/2026", "valor": 1429.10},                      # promo de abertura
         {"de": "25/07/2026", "ate": "02/08/2026", "valor": 1790.00},  # sem promo
@@ -50,6 +51,12 @@ PRECO_FIXO = {
     ],
 }
 PRECO_FIXO_ABAS = ["hotmart"]   # abas onde PRECO_FIXO vale (o lançamento ao vivo)
+
+# Produtos tratados como DOWNSELL — saem das "Vendas (produtos principais)" e do Comparativo,
+# e formam a seção "Downsell" (Visão Geral + Vendas Diárias, sem investimento).
+DOWNSELL_PRODUTOS = ["Guia de Adequação à RDC 1002/2025"]
+USAR_DOWNSELL     = True         # False = oculta a seção Downsell
+USAR_TOTAIS       = True         # False = oculta a seção Vendas Totais (principais + downsell)
 
 
 # Metas do funil — define cores (verde/amarelo/vermelho)
@@ -487,8 +494,10 @@ def _ler_hotmart():
     print("     nenhuma aba de vendas encontrada → " + " | ".join(erros))
     return None, None
 
-def hotmart_data():
-    print("  Lendo hotmart...")
+def hotmart_data(excluir_produtos=None, apenas_produtos=None, rotulo="hotmart"):
+    """excluir_produtos: descarta esses produtos (ex.: tira o downsell das Vendas principais).
+    apenas_produtos:  mantém só esses produtos (ex.: página Downsell)."""
+    print(f"  Lendo {rotulo}...")
     try:
         df, aba = _ler_hotmart()
         if df is None:
@@ -506,6 +515,19 @@ def hotmart_data():
         # colunas opcionais ausentes viram vazias (em vez de quebrar tudo)
         for opc in ("status", "sck", "pgto_raw", "nome", "email", "utm_camp", "utm_medium", "utm_content"):
             if opc not in df.columns: df[opc] = ""
+
+        # filtro por produto (Vendas principais x Downsell)
+        if (excluir_produtos or apenas_produtos) and "produto" in df.columns:
+            prod = _txt(df["produto"]).str.strip()
+            if apenas_produtos:
+                df = df[prod.isin(apenas_produtos)]
+                print(f"     filtro: apenas {apenas_produtos} → {len(df)} linha(s)")
+            elif excluir_produtos:
+                df = df[~prod.isin(excluir_produtos)]
+                print(f"     filtro: excluindo {excluir_produtos} → {len(df)} linha(s)")
+            if len(df) == 0:
+                print(f"     ⚠ nenhuma venda após filtro de produto — '{rotulo}' ficará vazio.")
+                return None
 
         # data: ISO (2026-07-10) sem dayfirst; formato BR (10/07/2026) com dayfirst
         _amostra = _txt(df["date"]).str.strip()
@@ -561,13 +583,21 @@ def hotmart_data():
                  "receita": [round(float(v), 2) for v in dg["receita"]]}
 
         # Canal SCK
-        df["canal"] = _txt(df["sck"]).str.split("|").str[0].replace({"nan": "Sem rastreio", "": "Sem rastreio"})
+        df["canal"] = _txt(df["sck"]).str.split("|").str[0].replace({"nan": "Sem rastreio", "": "Sem rastreio", "na": "Sem rastreio"})
         cg = df.groupby("canal").agg(v=("price", "count"), r=("price", "sum")).reset_index().sort_values("v", ascending=False)
         canal = [{"n": str(r["canal"]), "v": int(r["v"]), "r": round(float(r["r"]), 2)} for _, r in cg.iterrows()]
 
         # SCK detalhado
         sg = df.groupby(_txt(df["sck"])).agg(v=("price", "count"), r=("price", "sum")).reset_index().sort_values("v", ascending=False)
         sck_data = [{"n": str(r.iloc[0]), "v": int(r["v"]), "r": round(float(r["r"]), 2)} for _, r in sg.iterrows()]
+
+        # Produtos (para a Visão de Vendas Totais)
+        if "produto" in df.columns:
+            pdg = df.assign(_p=_txt(df["produto"]).str.strip().replace({"": "—", "nan": "—"})) \
+                    .groupby("_p").agg(v=("price", "count"), r=("price", "sum")).reset_index().sort_values("r", ascending=False)
+            produtos = [{"n": str(r["_p"]), "v": int(r["v"]), "r": round(float(r["r"]), 2)} for _, r in pdg.iterrows()]
+        else:
+            produtos = []
 
         # Temperatura
         camp_col = _txt(df["utm_camp"]).str.upper()
@@ -614,7 +644,7 @@ def hotmart_data():
         for _, row in df.iterrows():
             sck_v = str(row["sck"]) if pd.notna(row["sck"]) else ""
             canal_v = sck_v.split("|")[0] if sck_v else ""
-            canal_v = "Sem rastreio" if canal_v in ("", "nan") else canal_v
+            canal_v = "Sem rastreio" if canal_v in ("", "nan", "na") else canal_v
             camp_v = str(row.get("utm_camp", "")) if pd.notna(row.get("utm_camp", "")) else ""
             raw_rows.append({"d": row["date"].strftime("%d/%m"), "r": round(float(row["price"]), 2),
                              "sck": sck_v, "canal": canal_v,
@@ -639,7 +669,7 @@ def hotmart_data():
 
         return {"daily": daily, "canal": canal, "sck": sck_data, "temperatura": temperatura,
                 "pagamentos": pagamentos, "utm_camp": utm_camp, "publicos": publicos, "criativos": criativos,
-                "total_inv": round(total_inv, 2), "roas_geral": roas_geral,
+                "produtos": produtos, "total_inv": round(total_inv, 2), "roas_geral": roas_geral,
                 "raw": raw_rows, "vendas_raw": vendas_raw}
     except Exception as e:
         import traceback; traceback.print_exc()
@@ -692,7 +722,7 @@ def _serie_lancamento(df, cod, label, cor, atual):
         "pgto": _agg(pgto_s, "Outro"), "canal": _agg(canal_s, "Sem rastreio"), "horas": horas,
     }
 
-def lancamentos_data():
+def lancamentos_data(excluir_produtos=None):
     print("  Lendo lançamentos anteriores...")
     out = []
     for cfg in LANCAMENTOS_COMPARAR:
@@ -706,6 +736,12 @@ def lancamentos_data():
             print(f"     ✗ {cfg['cod']}: faltam colunas {faltando} na aba '{aba}'"); continue
         for opc in ("status", "sck", "pgto_raw"):
             if opc not in df.columns: df[opc] = ""
+
+        # tira o downsell do comparativo (mantém as Vendas principais comparáveis entre lançamentos)
+        if excluir_produtos and "produto" in df.columns:
+            prod = _txt(df["produto"]).str.strip()
+            n0 = len(df); df = df[~prod.isin(excluir_produtos)]
+            if n0 != len(df): print(f"     {cfg['cod']}: {n0-len(df)} venda(s) de downsell excluída(s) do comparativo")
 
         _amostra = _txt(df["date"]).str.strip()
         _iso = _amostra.str.match(r"^\d{4}-\d{2}-\d{2}").fillna(False).mean() > 0.5
@@ -953,7 +989,7 @@ def build_comp_data(df):
         },
     }
 
-def inject_all(tpl, meta_k, meta_d, meta_dc, meta_raw_c, meta_t, meta_bd, pes, hotmart, comp_data=None, lancs=None):
+def inject_all(tpl, meta_k, meta_d, meta_dc, meta_raw_c, meta_t, meta_bd, pes, hotmart, comp_data=None, lancs=None, downsell=None, total=None):
     html=Path(tpl).read_text(encoding="utf-8")
     html=replace_js_const(html,"META_KPIS",     meta_k)
     html=replace_js_const(html,"META_DAILY",     meta_d)
@@ -964,6 +1000,8 @@ def inject_all(tpl, meta_k, meta_d, meta_dc, meta_raw_c, meta_t, meta_bd, pes, h
     html=replace_js_const(html,"PESQUISA", pes if USAR_PESQUISA else False)
     html=replace_js_const(html,"HOTMART", hotmart if USAR_VENDAS else False)
     html=replace_js_const(html,"LANCAMENTOS", lancs if USAR_COMPARATIVO else False)
+    html=replace_js_const(html,"DOWNSELL", downsell if USAR_DOWNSELL else False)
+    html=replace_js_const(html,"TOTAIS", total if USAR_TOTAIS else False)
     if comp_data is not None:
         html=replace_js_const(html,"COMP_DATA", comp_data)
     html=replace_js_const(html,"DATA_GERACAO", date.today().strftime("%Y-%m-%d"))
@@ -1009,16 +1047,33 @@ def main():
         print("  (desativada)")
 
     print("\n[HOTMART]")
+    downsell = None
+    _excl = DOWNSELL_PRODUTOS if (USAR_DOWNSELL and DOWNSELL_PRODUTOS) else None
     if USAR_VENDAS:
-        hotmart=hotmart_data()
+        hotmart=hotmart_data(excluir_produtos=_excl, rotulo="hotmart (produtos principais)")
         if hotmart is None:
             print("  ⚠⚠ USAR_VENDAS=True porém sem dados → menu Vendas NÃO aparecerá no dashboard.")
     else:
         hotmart=None
         print("  (desativado)")
 
+    print("\n[DOWNSELL]")
+    if USAR_DOWNSELL and DOWNSELL_PRODUTOS:
+        downsell=hotmart_data(apenas_produtos=DOWNSELL_PRODUTOS, rotulo="downsell")
+        if downsell is None:
+            print("  (sem vendas de downsell ainda — seção não aparecerá)")
+    else:
+        print("  (desativado)")
+
+    print("\n[VENDAS TOTAIS]")
+    total = None
+    if USAR_VENDAS and USAR_TOTAIS:
+        total = hotmart_data(rotulo="vendas totais (tudo)")   # sem filtro = principais + downsell
+    else:
+        print("  (desativado)")
+
     print("\n[COMPARATIVO]")
-    lancs = lancamentos_data() if USAR_COMPARATIVO else None
+    lancs = lancamentos_data(excluir_produtos=_excl) if USAR_COMPARATIVO else None
 
     print("\n[COMPARAÇÃO LP + CTV]")
     try:
@@ -1035,7 +1090,7 @@ def main():
     print("\n[HTML]")
     if not Path(TEMPLATE_FILE).exists():
         print(f"  ERRO: {TEMPLATE_FILE} não encontrado"); return
-    html=inject_all(TEMPLATE_FILE,m_k,m_d,m_dc,m_raw,m_t,m_bd,pes,hotmart,comp_data,lancs)
+    html=inject_all(TEMPLATE_FILE,m_k,m_d,m_dc,m_raw,m_t,m_bd,pes,hotmart,comp_data,lancs,downsell,total)
     Path(OUTPUT_FILE).write_text(html,encoding="utf-8")
     print(f"  ✓ {OUTPUT_FILE} ({len(html)//1024}KB)")
 
