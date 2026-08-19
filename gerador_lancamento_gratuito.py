@@ -23,10 +23,13 @@ USAR_VENDAS      = True            # False = oculta menu Vendas (Hotmart)
 USAR_COMPARATIVO = True            # False = oculta menu Comparativo de lançamentos
 
 # Lançamentos comparados na aba "Comparativo" (ordem = ordem no gráfico)
+# "receita": total oficial do lançamento. Quando presente, fixa a receita total naquele
+# valor e ajusta a curva diária proporcionalmente (as contagens de vendas/dia não mudam).
+# Útil quando o número fechado da reunião não bate exatamente com nenhuma coluna da planilha.
 LANCAMENTOS_COMPARAR = [
-    {"cod":"RDC01","aba":"RDC01",  "label":"RDC01 · Março","cor":"#94a3b8"},
-    {"cod":"RDC02","aba":"RDC02",  "label":"RDC02 · Maio", "cor":"#f59e0b"},
-    {"cod":"RDC03","aba":"hotmart","label":"RDC03 · Atual","cor":"#0ea5e9","atual":True},
+    {"cod":"RDC01","aba":"RDC01",  "label":"RDC01 · Março","cor":"#94a3b8", "receita":124066.20},
+    {"cod":"RDC02","aba":"RDC02",  "label":"RDC02 · Maio", "cor":"#f59e0b", "receita":138850.14},
+    {"cod":"RDC03","aba":"RDC03", "label":"RDC03 · Atual","cor":"#0ea5e9","atual":True},
 ]
 # Ignora vendas abaixo deste valor (ex.: 10 descarta compras-teste de R$1). 0 = não filtra.
 VENDA_VALOR_MIN  = 0
@@ -52,11 +55,19 @@ PRECO_FIXO = {
 }
 PRECO_FIXO_ABAS = ["hotmart"]   # abas onde PRECO_FIXO vale (o lançamento ao vivo)
 
+# Quando o lançamento FECHA, a Hotmart exporta a planilha completa com a coluna
+# "Valor de compra sem impostos" (faturamento sem taxa de cartão / sem juros de parcela).
+# Aponte aqui a aba dessa exportação: o dashboard passa a usar o valor EXATO por venda
+# (casado por e-mail+produto), em vez do preço fixo aproximado. Deixe None durante o
+# lançamento ao vivo — aí valem os PRECO_FIXO acima.
+VALOR_LIQUIDO_ABA = "RDC03"
+
 # Produtos tratados como DOWNSELL — saem das "Vendas (produtos principais)" e do Comparativo,
 # e formam a seção "Downsell" (Visão Geral + Vendas Diárias, sem investimento).
 DOWNSELL_PRODUTOS = ["Guia de Adequação à RDC 1002/2025"]
 USAR_DOWNSELL     = True         # False = oculta a seção Downsell
 USAR_TOTAIS       = True         # False = oculta a seção Vendas Totais (principais + downsell)
+COMPARATIVO_INCLUI_DOWNSELL = True  # True = RDC03 entra no comparativo com o downsell (faturamento cheio)
 
 
 # Metas do funil — define cores (verde/amarelo/vermelho)
@@ -369,14 +380,23 @@ def _norm_col(c):
 # Aliases por campo, em ordem de prioridade. Comparados com o header normalizado,
 # primeiro por igualdade exata; só se nenhum casar exato é que se tenta "contém".
 # Ordem importa no formato longo da Hotmart (ex.: "nome do produto" NÃO pode virar comprador).
+# Métrica de receita da aba de fechamento (formato longo da Hotmart):
+#   "com" = "Valor de compra COM impostos" (bruto — inclui juros de parcela / taxa de cartão)
+#   "sem" = "Valor de compra SEM impostos" (sem a taxa de cartão)
+VALOR_FECHAMENTO_METRICA = "com"   # RDC03 fechado: cliente pediu o valor com impostos (R$131.754,43)
+
+_COL_COM = ["valor de compra com impostos", "faturamento com impostos"]
+_COL_SEM = ["valor de compra sem impostos", "faturamento bruto sem impostos"]
+_COL_VALOR_PREF = (_COL_COM + _COL_SEM) if VALOR_FECHAMENTO_METRICA == "com" else (_COL_SEM + _COL_COM)
+
 _HM_ALIAS = {
-    "date":       ["order date", "data de venda", "order date time", "data pedido", "data da compra", "date", "data"],
-    "price":      ["price", "preco do produto", "product price", "total price", "valor", "commission value"],
-    "status":     ["transaction status", "status"],
-    "sck":        ["tracking source sck", "origem de checkout", "sck", "source sck", "src sck", "tracking sck"],
-    "pgto_raw":   ["payment method", "tipo de pagamento", "forma pagamento", "metodo pagamento", "payment type"],
-    "nome":       ["buyer name", "nome", "nome comprador", "name"],
-    "email":      ["buyer email", "email", "e mail", "email comprador"],
+    "date":       ["order date", "data de venda", "data da transacao", "order date time", "data pedido", "data da compra", "date", "data"],
+    "price":      _COL_VALOR_PREF + ["price", "preco do produto", "product price", "total price", "valor", "commission value"],
+    "status":     ["transaction status", "status da transacao", "status"],
+    "sck":        ["tracking source sck", "origem de checkout", "codigo sck", "sck", "source sck", "src sck", "tracking sck"],
+    "pgto_raw":   ["payment method", "tipo de pagamento", "metodo de pagamento", "forma pagamento", "metodo pagamento", "payment type"],
+    "nome":       ["buyer name", "comprador a", "nome", "nome comprador", "name"],
+    "email":      ["buyer email", "email do a comprador a", "email", "e mail", "email comprador"],
     "produto":    ["product name", "nome do produto", "produto"],
     "utm_camp":   ["captacao campaign", "utm campaign", "campaign", "campanha"],
     "utm_medium": ["captacao medium", "utm medium", "medium", "publico"],
@@ -395,6 +415,47 @@ def _norm_pgto(m):
         return "Cartão de Crédito"
     if s in ("", "NAN", "NONE"):                          return "Outro"
     return "Cartão de Crédito"
+
+_VL_CACHE = {}
+def _mapa_valor_liquido():
+    """Lê VALOR_LIQUIDO_ABA e devolve {email||produto: valor sem impostos}.
+    None se não configurado ou se a aba não tiver as colunas necessárias."""
+    if not VALOR_LIQUIDO_ABA:
+        return None
+    if VALOR_LIQUIDO_ABA in _VL_CACHE:
+        return _VL_CACHE[VALOR_LIQUIDO_ABA]
+    try:
+        d = pd.read_csv(sheet_url(VALOR_LIQUIDO_ABA))
+    except Exception as e:
+        print(f"     ⚠ valor líquido: aba '{VALOR_LIQUIDO_ABA}' ilegível ({type(e).__name__}) — mantendo preços fixos")
+        _VL_CACHE[VALOR_LIQUIDO_ABA] = None; return None
+    d, _, _ = _map_hotmart_cols(d)
+    if not all(c in d.columns for c in ("price", "email", "produto")):
+        print(f"     ⚠ valor líquido: aba '{VALOR_LIQUIDO_ABA}' sem valor/email/produto — mantendo preços fixos")
+        _VL_CACHE[VALOR_LIQUIDO_ABA] = None; return None
+    d = d.assign(_v=to_num(d["price"]),
+                 _k=_txt(d["email"]).str.strip().str.lower() + "||" + _txt(d["produto"]).str.strip())
+    mapa = d.groupby("_k")["_v"].sum().to_dict()
+    _lbl = "com impostos" if VALOR_FECHAMENTO_METRICA == "com" else "sem impostos"
+    print(f"     valor de fechamento ({_lbl}): {len(mapa)} chave(s) de '{VALOR_LIQUIDO_ABA}' (soma R${sum(mapa.values()):,.2f})")
+    _VL_CACHE[VALOR_LIQUIDO_ABA] = mapa
+    return mapa
+
+def _aplicar_valor_liquido(df):
+    """Substitui price pelo valor sem impostos (casando por email+produto). Marca as linhas
+    cobertas em _vl_ok para o preço fixo não sobrescrevê-las depois."""
+    mapa = _mapa_valor_liquido()
+    if not mapa or not all(c in df.columns for c in ("email", "produto")):
+        return df
+    df = df.copy()
+    k = _txt(df["email"]).str.strip().str.lower() + "||" + _txt(df["produto"]).str.strip()
+    novo = k.map(mapa)
+    ok = novo.notna()
+    df["price"] = novo.where(ok, df["price"])
+    df["_vl_ok"] = ok.values
+    _lbl = "com impostos" if VALOR_FECHAMENTO_METRICA == "com" else "sem impostos"
+    print(f"     valor de fechamento ({_lbl}) aplicado em {int(ok.sum())}/{len(df)} venda(s)")
+    return df
 
 def _preco_fixo_produto(produto, data):
     """Preço fixo para (produto, data) ou None se o produto não está em PRECO_FIXO.
@@ -423,14 +484,18 @@ def _preco_fixo_produto(produto, data):
 
 def _aplicar_preco_fixo(df, aba):
     """Se a aba está em PRECO_FIXO_ABAS, substitui price pelo valor fixo do produto,
-    resolvido pela data da venda. Produtos sem regra mantêm o preço da planilha."""
+    resolvido pela data da venda. Só age nas linhas ainda sem valor exato (_vl_ok=False);
+    produtos sem regra mantêm o preço da planilha."""
     if not PRECO_FIXO or aba not in PRECO_FIXO_ABAS or "produto" not in df.columns:
-        return df
+        return df.drop(columns=["_vl_ok"], errors="ignore")
     df = df.copy()
+    exato = df["_vl_ok"].tolist() if "_vl_ok" in df.columns else [False]*len(df)
     prod = _txt(df["produto"]).str.strip()
     precos = df["price"].astype(float).tolist()
     aplicados, sem_regra, fora = 0, set(), []
     for i, (p, d) in enumerate(zip(prod, df["date"])):
+        if exato[i]:               # já tem valor exato sem impostos → não mexe
+            continue
         val, foraFaixa = _preco_fixo_produto(p, d)
         if val is not None:
             precos[i] = val; aplicados += 1
@@ -439,13 +504,14 @@ def _aplicar_preco_fixo(df, aba):
         elif p and p != "nan":
             sem_regra.add(p)
     df["price"] = precos
-    print(f"     preço fixo aplicado em {aplicados} venda(s)")
+    if aplicados:
+        print(f"     preço fixo aplicado em {aplicados} venda(s)")
     if fora:
         exemplos = sorted({(p[:30], (pd.to_datetime(d, errors='coerce').strftime('%d/%m') if pd.notna(pd.to_datetime(d, errors='coerce')) else '?')) for p, d in fora})
         print(f"     ⚠ {len(fora)} venda(s) fora das faixas de data (usei a faixa mais próxima): {exemplos[:5]}")
     if sem_regra:
         print(f"     ⚠ produtos SEM preço fixo (usando valor da planilha): {sorted(sem_regra)}")
-    return df
+    return df.drop(columns=["_vl_ok"], errors="ignore")
 
 def _map_hotmart_cols(df):
     """devolve (df_renomeado, faltando[], achados{}) mapeando headers reais -> nomes internos.
@@ -534,7 +600,8 @@ def hotmart_data(excluir_produtos=None, apenas_produtos=None, rotulo="hotmart"):
         _iso = _amostra.str.match(r"^\d{4}-\d{2}-\d{2}").fillna(False).mean() > 0.5
         df["date"] = pd.to_datetime(df["date"], errors="coerce", dayfirst=not _iso)
         df["price"] = to_num(df["price"])
-        df = _aplicar_preco_fixo(df, aba)
+        df = _aplicar_valor_liquido(df)   # valor exato sem impostos (quando a aba de fechamento existe)
+        df = _aplicar_preco_fixo(df, aba) # preço fixo só como fallback nas linhas sem valor exato
         df = df.dropna(subset=["date"])
 
         # status: aceita variações PT/EN; se a coluna vier vazia, não filtra
@@ -760,6 +827,19 @@ def lancamentos_data(excluir_produtos=None):
             print(f"     ⚠ {cfg['cod']}: sem vendas válidas na aba '{aba}'"); continue
 
         s = _serie_lancamento(df, cfg["cod"], cfg.get("label", cfg["cod"]), cfg.get("cor", "#94a3b8"), cfg.get("atual", False))
+
+        # receita oficial: fixa o total e reescala a curva diária (contagens não mudam)
+        alvo = cfg.get("receita")
+        if alvo is not None and s["receita"] > 0:
+            f = float(alvo) / s["receita"]
+            s["serie"]["receita"] = [round(v * f, 2) for v in s["serie"]["receita"]]
+            s["serie"]["cum_r"]   = [round(v * f, 2) for v in s["serie"]["cum_r"]]
+            for grp in ("pgto", "canal"):
+                for it in s[grp]: it["r"] = round(it["r"] * f, 2)
+            print(f"     {cfg['cod']}: receita ajustada R${s['receita']:,.2f} → R${float(alvo):,.2f} (fator {f:.4f})")
+            s["receita"] = round(float(alvo), 2)
+            s["ticket"]  = round(float(alvo) / s["vendas"], 2) if s["vendas"] else 0
+
         out.append(s)
         print(f"     ✓ {cfg['cod']}: {s['vendas']} vendas | R${s['receita']:,.2f} | {s['dias']} dia(s) | início {s['ini']}")
 
@@ -1073,7 +1153,7 @@ def main():
         print("  (desativado)")
 
     print("\n[COMPARATIVO]")
-    lancs = lancamentos_data(excluir_produtos=_excl) if USAR_COMPARATIVO else None
+    lancs = lancamentos_data(excluir_produtos=None if COMPARATIVO_INCLUI_DOWNSELL else _excl) if USAR_COMPARATIVO else None
 
     print("\n[COMPARAÇÃO LP + CTV]")
     try:
