@@ -17,10 +17,10 @@ NOME_CLIENTE     = "Dra Monica"
 LOGO_LETRA       = "DM"
 COR_ACENTO       = "#0ea5e9"
 
-LANCAMENTO_COD   = "RDC03"        # filtra campanhas; "" = ver tudo
+LANCAMENTO_COD   = "RDC04"        # filtra campanhas; "" = ver tudo
 USAR_PESQUISA    = True            # False = oculta aba Pesquisa
-USAR_VENDAS      = True            # False = oculta menu Vendas (Hotmart)
-USAR_COMPARATIVO = True            # False = oculta menu Comparativo de lançamentos
+USAR_VENDAS      = False           # RDC04 em captação — sem vendas ainda
+USAR_COMPARATIVO = False           # RDC04 em captação — comparativo é de vendas, fica off
 
 # Lançamentos comparados na aba "Comparativo" (ordem = ordem no gráfico)
 # "receita": total oficial do lançamento. Quando presente, fixa a receita total naquele
@@ -29,7 +29,7 @@ USAR_COMPARATIVO = True            # False = oculta menu Comparativo de lançame
 LANCAMENTOS_COMPARAR = [
     {"cod":"RDC01","aba":"RDC01",  "label":"RDC01 · Março","cor":"#94a3b8", "receita":124066.20},
     {"cod":"RDC02","aba":"RDC02",  "label":"RDC02 · Maio", "cor":"#f59e0b", "receita":138850.14},
-    {"cod":"RDC03","aba":"RDC03", "label":"RDC03 · Atual","cor":"#0ea5e9","atual":True},
+    {"cod":"RDC03","aba":"RDC03", "label":"RDC03 · Ago","cor":"#0ea5e9"},
 ]
 # Ignora vendas abaixo deste valor (ex.: 10 descarta compras-teste de R$1). 0 = não filtra.
 VENDA_VALOR_MIN  = 0
@@ -60,13 +60,13 @@ PRECO_FIXO_ABAS = ["hotmart"]   # abas onde PRECO_FIXO vale (o lançamento ao vi
 # Aponte aqui a aba dessa exportação: o dashboard passa a usar o valor EXATO por venda
 # (casado por e-mail+produto), em vez do preço fixo aproximado. Deixe None durante o
 # lançamento ao vivo — aí valem os PRECO_FIXO acima.
-VALOR_LIQUIDO_ABA = "RDC03"
+VALOR_LIQUIDO_ABA = None          # aponte à aba de fechamento quando o RDC04 encerrar
 
 # Produtos tratados como DOWNSELL — saem das "Vendas (produtos principais)" e do Comparativo,
 # e formam a seção "Downsell" (Visão Geral + Vendas Diárias, sem investimento).
 DOWNSELL_PRODUTOS = ["Guia de Adequação à RDC 1002/2025"]
-USAR_DOWNSELL     = True         # False = oculta a seção Downsell
-USAR_TOTAIS       = True         # False = oculta a seção Vendas Totais (principais + downsell)
+USAR_DOWNSELL     = False        # RDC04 em captação — sem downsell ainda
+USAR_TOTAIS       = False        # RDC04 em captação — sem vendas ainda
 COMPARATIVO_INCLUI_DOWNSELL = True  # True = RDC03 entra no comparativo com o downsell (faturamento cheio)
 
 
