@@ -2,11 +2,11 @@
   "cliente": "Dra Monica",
   "cor": "#0ea5e9",
   "letra": "DM",
-  "lancamento": "RDC03",
+  "lancamento": "RDC04",
   "atualizado": "01/09/2026",
   "kpis": {
-    "spend": 12512.19,
-    "leads": 3002,
-    "cpl": 4.17
+    "spend": 251.34,
+    "leads": 13,
+    "cpl": 19.33
   }
 }
