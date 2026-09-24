@@ -496,12 +496,18 @@ details.desk-only{display:block!important;}
         <div style="font-size:12px;color:var(--muted)">Vendas aprovadas · período do lançamento</div>
       </div>
       <!-- KPIs -->
-      <div class="krow k3 mb14" id="vendasKpis"></div>
+      <div class="krow k4 mb14" id="vendasKpis"></div>
       <!-- Gráfico diário -->
       <div class="cc mb14">
         <div class="cc-t" style="color:var(--hotmart)">Vendas por Dia</div>
-        <div class="cc-s">Quantidade de vendas (barras) · Receita bruta (linha)</div>
+        <div class="cc-s">Compradores do produto principal (base) · upsells empilhados em outras cores · Receita bruta (linha)</div>
         <div class="cw" style="height:210px"><canvas id="chVendasDia"></canvas></div>
+      </div>
+      <!-- Lista por produto -->
+      <div class="cc mb14">
+        <div class="cc-t">Por Produto</div>
+        <div class="cc-s">Compras de cada produto · upsells marcados</div>
+        <div style="overflow-x:auto"><div id="vendasProdutos" style="margin-top:8px"></div></div>
       </div>
       <!-- Aviso dados gerais -->
       <div style="margin:4px 0 14px;padding:10px 14px;background:var(--surface2);border-left:3px solid var(--muted2);border-radius:var(--r)">
@@ -1864,6 +1870,7 @@ function renderVendasLista(){
   // Agregar por dia e hora
   const diasMap={};
   rows.forEach(r=>{
+    if(r.upsell) return;   // mini-gráficos por hora: só o produto principal
     if(!diasMap[r.dia]) diasMap[r.dia]=new Array(24).fill(0);
     if(r.hora>=0&&r.hora<24) diasMap[r.dia][r.hora]++;
   });
@@ -1930,7 +1937,7 @@ function renderVendasLista(){
   rows.forEach(r=>{
     html+='<tr style="border-bottom:1px solid var(--border)">'+
       '<td style="font-size:11px;padding:7px 12px;white-space:nowrap;color:var(--muted)">'+r.d+'</td>'+
-      '<td style="font-size:11px;padding:7px 12px;white-space:nowrap;font-weight:600">'+r.nome+'</td>'+
+      '<td style="font-size:11px;padding:7px 12px;white-space:nowrap;font-weight:600">'+r.nome+(r.upsell?' <span style="font-size:8px;font-weight:700;background:#8b5cf622;color:#8b5cf6;padding:2px 6px;border-radius:4px;letter-spacing:.5px;vertical-align:middle">UPSELL</span>':'')+'</td>'+
       '<td style="font-size:11px;padding:7px 12px;white-space:nowrap;color:var(--muted)">'+r.email+'</td>'+
       '<td class="num" style="font-size:11px;padding:7px 12px;color:'+HL+';font-weight:700;white-space:nowrap">'+fRec(r.valor)+'</td>'+
       '<td style="font-size:11px;padding:7px 12px;white-space:nowrap">'+r.pgto+'</td>'+
@@ -2015,32 +2022,64 @@ function renderVendas(){
     return out;
   }
 
-  const hd=applyPeriodVendas(HM.daily);
+  // índices do período (para filtrar também a série de upsells por produto)
+  const hdAll=HM.daily;
+  const hd=applyPeriodVendas(hdAll);
+  const idxSel=hdAll.days.map((d,i)=>hd.days.indexOf(d)>=0?i:-1).filter(i=>i>=0);
+  const upsSeries=Object.keys(HM.daily_upsells||{}).map(n=>({n,data:idxSel.map(i=>(HM.daily_upsells[n]||[])[i]||0)}));
+
+  // Vendas = compradores únicos do principal (por e-mail); receita = tudo (com upsells)
   const totVendas=hd.vendas.reduce((a,b)=>a+b,0);
+  const totUps=(hd.upsells||[]).reduce((a,b)=>a+b,0);
   const totReceita=hd.receita.reduce((a,b)=>a+b,0);
   const ticket=totVendas>0?r2(totReceita/totVendas):null;
-  const roasGeral=HM.roas_geral;
-  const roacCor=roasGeral==null?'var(--muted)':roasGeral>=3?'#059669':roasGeral>=1?'#d97706':'#dc2626';
 
   document.getElementById('vendasKpis').innerHTML=
-    '<div class="kpi" style="--kc:'+HL+'"><div class="kpi-lbl">Receita Bruta</div><div class="kpi-val" style="font-size:18px;color:'+HL+'">'+fRec(totReceita)+'</div><div class="kpi-sub">vendas aprovadas</div></div>'+
-    '<div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Vendas</div><div class="kpi-val">'+totVendas+'</div><div class="kpi-sub">transações aprovadas</div></div>'+
-    '<div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Ticket Médio</div><div class="kpi-val">'+fRec(ticket)+'</div><div class="kpi-sub">por venda</div></div>';
+    '<div class="kpi" style="--kc:'+HL+'"><div class="kpi-lbl">Receita Bruta</div><div class="kpi-val" style="font-size:18px;color:'+HL+'">'+fRec(totReceita)+'</div><div class="kpi-sub">inclui upsells</div></div>'+
+    '<div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Vendas</div><div class="kpi-val">'+totVendas+'</div><div class="kpi-sub">compradores do principal</div></div>'+
+    '<div class="kpi" style="--kc:#8b5cf6"><div class="kpi-lbl">Upsells</div><div class="kpi-val" style="color:#8b5cf6">'+totUps+'</div><div class="kpi-sub">compras adicionais</div></div>'+
+    '<div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Ticket Médio</div><div class="kpi-val">'+fRec(ticket)+'</div><div class="kpi-sub">receita ÷ compradores</div></div>';
+
+  // Gráfico empilhado: base = compradores (principal), cada upsell em outra cor
+  const UPS_COLS=['#8b5cf6','#f59e0b','#06b6d4','#ec4899','#84cc16'];
+  const stackDs=[{label:'Compradores (principal)',data:hd.vendas,backgroundColor:HL+'bb',borderRadius:2,type:'bar',yAxisID:'y1',stack:'v',
+      datalabels:{display:ctx=>showLabels,color:HL,font:{size:labelSize,weight:'bold'},anchor:'center',align:'center',clip:false}}];
+  upsSeries.forEach((s,i)=>stackDs.push({label:s.n,data:s.data,backgroundColor:UPS_COLS[i%UPS_COLS.length]+'cc',borderRadius:2,type:'bar',yAxisID:'y1',stack:'v',datalabels:{display:false}}));
+  stackDs.push({label:'Receita',data:hd.receita,borderColor:'#059669',backgroundColor:'transparent',tension:.3,pointRadius:3,borderWidth:2,type:'line',yAxisID:'y2',spanGaps:true,datalabels:{display:false}});
 
   dc('chVendasDia');
   CH['chVendasDia']=new Chart(document.getElementById('chVendasDia'),{
-    data:{labels:hd.days,datasets:[
-      {label:'Vendas',data:hd.vendas,backgroundColor:HL+'bb',borderRadius:4,type:'bar',yAxisID:'y1',
-       datalabels:{display:ctx=>showLabels,color:HL,font:{size:labelSize,weight:'bold'},anchor:'end',align:'top',offset:2,clip:false}},
-      {label:'Receita',data:hd.receita,borderColor:'#059669',backgroundColor:'transparent',tension:.3,pointRadius:3,borderWidth:2,type:'line',yAxisID:'y2',spanGaps:true,datalabels:{display:false}},
-    ]},
-    options:{...bo(),scales:{
-      x:{ticks:{color:TXT(),font:bf},grid:{color:GRID()}},
-      y:{ticks:{color:TXT(),font:bf},grid:{color:GRID()},min:0},
-      y1:{position:'right',ticks:{color:HL,font:bf},grid:{display:false},grace:'20%'},
+    data:{labels:hd.days,datasets:stackDs},
+    options:{...bo({plugins:{legend:{display:true,labels:{color:TXT(),font:bf,boxWidth:9,padding:8,usePointStyle:true}},
+      tooltip:{callbacks:{label:ctx=>ctx.dataset.type==='line'?' Receita: '+fRec(ctx.raw):' '+ctx.dataset.label+': '+ctx.raw}}}}),
+    scales:{
+      x:{stacked:true,ticks:{color:TXT(),font:bf},grid:{color:GRID()}},
+      y:{display:false,min:0},
+      y1:{stacked:true,position:'right',ticks:{color:HL,font:bf,stepSize:1},grid:{display:false},grace:'20%',min:0},
       y2:{position:'right',ticks:{color:'#059669',font:bf,callback:v=>'R$'+v.toLocaleString('pt-BR')},grid:{display:false},offset:true,min:0},
     }}
   });
+
+  // Lista por produto (upsells marcados)
+  const prods=HM.produtos||[];
+  const elProd=document.getElementById('vendasProdutos');
+  if(elProd){
+    if(!prods.length){ elProd.innerHTML='<div style="padding:10px;color:var(--muted);font-size:12px">Sem produtos</div>'; }
+    else{
+      let ph='<table style="width:100%;border-collapse:collapse;min-width:320px"><thead><tr style="background:var(--surface2)">'+
+        '<th style="font-size:9px;padding:6px 10px;text-align:left;color:var(--muted);text-transform:uppercase">Produto</th>'+
+        '<th class="num" style="font-size:9px;padding:6px 10px;color:var(--muted);text-transform:uppercase">Compras</th>'+
+        '<th class="num" style="font-size:9px;padding:6px 10px;color:var(--muted);text-transform:uppercase">Receita</th></tr></thead><tbody>';
+      prods.forEach(p=>{
+        const tag=p.upsell?' <span style="font-size:8px;font-weight:700;background:#8b5cf622;color:#8b5cf6;padding:2px 6px;border-radius:4px;letter-spacing:.5px;vertical-align:middle">UPSELL</span>':'';
+        ph+='<tr style="border-top:1px solid var(--border)">'+
+          '<td style="font-size:11px;padding:6px 10px;font-weight:600;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+p.n+'">'+p.n+tag+'</td>'+
+          '<td class="num" style="font-size:11px;padding:6px 10px;font-weight:700">'+p.v+'</td>'+
+          '<td class="num" style="font-size:11px;padding:6px 10px;color:'+(p.upsell?'#8b5cf6':HL)+';font-weight:700">'+fRec(p.r)+'</td></tr>';
+      });
+      elProd.innerHTML=ph+'</tbody></table>';
+    }
+  }
 
   const TEMP_COLS={'Quente':'#ea580c','Frio':'#fdba74'};
   const PGTO_COLS=['#ea580c','#fdba74'];
@@ -2335,8 +2374,8 @@ function renderComparativo(){
     return '<div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid '+l.cor+';border-radius:var(--r);padding:12px 14px;box-shadow:var(--sh)">'+
       '<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:8px">'+
         '<div style="font-size:11px;font-weight:700;color:'+l.cor+'">'+l.label+'</div>'+badge+'</div>'+
-      '<div style="font-size:22px;font-weight:700;line-height:1;margin-bottom:2px">'+fN(l.vendas)+'</div>'+
-      '<div style="font-size:10px;color:var(--muted);margin-bottom:8px">vendas aprovadas</div>'+
+      '<div style="font-size:22px;font-weight:700;line-height:1;margin-bottom:2px">'+fN(l.vendas)+(l.upsells?'<span style="font-size:11px;font-weight:700;color:#8b5cf6;margin-left:6px">+'+l.upsells+' upsell'+(l.upsells!==1?'s':'')+'</span>':'')+'</div>'+
+      '<div style="font-size:10px;color:var(--muted);margin-bottom:8px">'+(l.upsells?'compradores':'vendas aprovadas')+'</div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 8px;font-size:10px">'+
         '<div><div style="color:var(--muted2)">Receita</div><div style="font-weight:700;font-family:\'DM Mono\',monospace">'+fR(l.receita)+'</div></div>'+
         '<div><div style="color:var(--muted2)">Ticket médio</div><div style="font-weight:700;font-family:\'DM Mono\',monospace">'+fR(l.ticket)+'</div></div>'+
@@ -2460,7 +2499,8 @@ function renderListaVendasGen(data, gridId, tbodyId, prefix){
   const HL=getComputedStyle(document.documentElement).getPropertyValue('--hotmart').trim()||'#ff6b00';
   const rows=data.vendas_raw;
   const diasMap={};
-  rows.forEach(r=>{ if(!diasMap[r.dia]) diasMap[r.dia]=new Array(24).fill(0); if(r.hora>=0&&r.hora<24) diasMap[r.dia][r.hora]++; });
+  // mini-gráficos por hora: só o produto principal (upsells ficam fora)
+  rows.forEach(r=>{ if(r.upsell) return; if(!diasMap[r.dia]) diasMap[r.dia]=new Array(24).fill(0); if(r.hora>=0&&r.hora<24) diasMap[r.dia][r.hora]++; });
   const dias=Object.keys(diasMap).sort();
   const grid=document.getElementById(gridId);
   if(grid){
@@ -2499,7 +2539,7 @@ function renderListaVendasGen(data, gridId, tbodyId, prefix){
   rows.forEach(r=>{
     html+='<tr style="border-bottom:1px solid var(--border)">'+
       '<td style="font-size:11px;padding:7px 12px;white-space:nowrap;color:var(--muted)">'+r.d+'</td>'+
-      '<td style="font-size:11px;padding:7px 12px;white-space:nowrap;font-weight:600">'+r.nome+'</td>'+
+      '<td style="font-size:11px;padding:7px 12px;white-space:nowrap;font-weight:600">'+r.nome+(r.upsell?' <span style="font-size:8px;font-weight:700;background:#8b5cf622;color:#8b5cf6;padding:2px 6px;border-radius:4px;letter-spacing:.5px;vertical-align:middle">UPSELL</span>':'')+'</td>'+
       '<td style="font-size:11px;padding:7px 12px;white-space:nowrap;color:var(--muted)">'+r.email+'</td>'+
       '<td class="num" style="font-size:11px;padding:7px 12px;color:'+HL+';font-weight:700;white-space:nowrap">'+fRec(r.valor)+'</td>'+
       '<td style="font-size:11px;padding:7px 12px;white-space:nowrap">'+r.pgto+'</td>'+
