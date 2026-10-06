@@ -814,11 +814,15 @@ def _serie_lancamento(df, cod, label, cor, atual, upsells=None, downsells=None):
     g_d = _por_dia(df["_dw"], True)    # compradores do downsell
     g_u = _por_dia(df["_up"], False)   # upsells (linhas)
     g_r = df.groupby("_dia")["price"].sum().to_dict()
+    def _rec(mask):
+        g = df[mask].groupby("_dia")["price"].sum().to_dict() if mask.any() else {}
+        return [round(float(g.get(i, 0.0)), 2) for i in range(1, ndias+1)]
 
     vendas    = [int(g_v.get(i, 0)) for i in range(1, ndias+1)]
     downs     = [int(g_d.get(i, 0)) for i in range(1, ndias+1)]
     ups       = [int(g_u.get(i, 0)) for i in range(1, ndias+1)]
     receita   = [round(float(g_r.get(i, 0.0)), 2) for i in range(1, ndias+1)]
+    rec_main, rec_up, rec_down = _rec(df["_mn"]), _rec(df["_up"]), _rec(df["_dw"])
     cum_v, cum_d, cum_r, av, ad, ar = [], [], [], 0, 0, 0.0
     for i in range(ndias):
         av += vendas[i]; ad += downs[i]; ar += receita[i]
@@ -851,6 +855,7 @@ def _serie_lancamento(df, cod, label, cor, atual, upsells=None, downsells=None):
         "ticket": round((r_main + r_up)/tot_v, 2) if tot_v else 0,
         "pico": {"dia": int(vendas.index(max(vendas)))+1, "v": max(vendas)} if vendas else None,
         "serie": {"datas": datas, "vendas": vendas, "downsells": downs, "upsells": ups, "receita": receita,
+                  "rec_main": rec_main, "rec_up": rec_up, "rec_down": rec_down,
                   "cum_v": cum_v, "cum_d": cum_d, "cum_r": cum_r},
         "pgto": _agg(pgto_s, "Outro"), "canal": _agg(canal_s, "Sem rastreio"), "horas": horas,
     }
@@ -905,6 +910,8 @@ def lancamentos_data(excluir_produtos=None):
             f = float(alvo) / s["receita"]
             s["serie"]["receita"] = [round(v * f, 2) for v in s["serie"]["receita"]]
             s["serie"]["cum_r"]   = [round(v * f, 2) for v in s["serie"]["cum_r"]]
+            for k in ("rec_main", "rec_up", "rec_down"):
+                s["serie"][k] = [round(v * f, 2) for v in s["serie"][k]]
             for grp in ("pgto", "canal"):
                 for it in s[grp]: it["r"] = round(it["r"] * f, 2)
             for k in ("receita_main", "receita_down", "receita_up"): s[k] = round(s[k] * f, 2)
