@@ -2583,8 +2583,8 @@ function renderDownsell(){
 
   document.getElementById('dsKpis').innerHTML=
     '<div class="kpi" style="--kc:'+HL+'"><div class="kpi-lbl">Receita Bruta</div><div class="kpi-val" style="font-size:18px;color:'+HL+'">'+fRec(totR)+'</div><div class="kpi-sub">só downsell</div></div>'+
-    '<div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Vendas</div><div class="kpi-val">'+totV+'</div><div class="kpi-sub">transações aprovadas</div></div>'+
-    '<div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Ticket Médio</div><div class="kpi-val">'+fRec(ticket)+'</div><div class="kpi-sub">por venda</div></div>';
+    '<div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Vendas</div><div class="kpi-val">'+totV+'</div><div class="kpi-sub">compradores do downsell</div></div>'+
+    '<div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Ticket Médio</div><div class="kpi-val">'+fRec(ticket)+'</div><div class="kpi-sub">por comprador</div></div>';
 
   dc('chDsDia');
   CH['chDsDia']=new Chart(document.getElementById('chDsDia'),{
@@ -2621,8 +2621,8 @@ function renderTotal(){
 
   document.getElementById('totKpis').innerHTML=
     '<div class="kpi" style="--kc:'+HL+'"><div class="kpi-lbl">Receita Total</div><div class="kpi-val" style="font-size:18px;color:'+HL+'">'+fRec(totR)+'</div><div class="kpi-sub">principais + downsell</div></div>'+
-    '<div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Vendas Totais</div><div class="kpi-val">'+totV+'</div><div class="kpi-sub">transações aprovadas</div></div>'+
-    '<div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Ticket Médio</div><div class="kpi-val">'+fRec(ticket)+'</div><div class="kpi-sub">por venda</div></div>';
+    '<div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Vendas Totais</div><div class="kpi-val">'+totV+'</div><div class="kpi-sub">compradores · principal + downsell</div></div>'+
+    '<div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Ticket Médio</div><div class="kpi-val">'+fRec(ticket)+'</div><div class="kpi-sub">receita ÷ compradores</div></div>';
 
   // Composição principais + downsell = total (nunca deixa o total solto)
   const pV=(HOTMART&&HOTMART.daily)?HOTMART.daily.vendas.reduce((a,b)=>a+b,0):0;
