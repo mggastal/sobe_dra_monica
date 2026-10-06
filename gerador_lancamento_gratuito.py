@@ -65,7 +65,7 @@ UPSELL_PRODUTOS   = ["poplist"]
 DOWNSELL_PRODUTOS = ["Guia de Adequação à RDC 1002/2025"]
 USAR_DOWNSELL     = True         # campanha de downsell ativa
 USAR_TOTAIS       = True         # principais + downsell
-COMPARATIVO_INCLUI_DOWNSELL = True  # True = RDC03 entra no comparativo com o downsell (faturamento cheio)
+# (O comparativo sempre lê todas as vendas e as SEPARA em principal / upsell / downsell no card.)
 
 
 # Metas do funil — define cores (verde/amarelo/vermelho)
@@ -779,68 +779,79 @@ def hotmart_data(excluir_produtos=None, apenas_produtos=None, rotulo="hotmart"):
         return None
 
 # ══ COMPARATIVO DE LANÇAMENTOS ════════════════════════
-def _serie_lancamento(df, cod, label, cor, atual, upsells=None):
-    """monta a série diária alinhada por dia do lançamento (D1 = primeira venda).
-    Com `upsells` definido: vendas = compradores únicos (e-mail) do produto principal por dia,
-    receita = tudo (principal + upsells). Sem `upsells`: conta linhas (comportamento legado,
-    preserva os números já aprovados dos lançamentos anteriores)."""
-    upsells = upsells or []
+def _serie_lancamento(df, cod, label, cor, atual, upsells=None, downsells=None):
+    """Série diária alinhada por dia do lançamento (D1 = primeira venda), com as vendas
+    SEPARADAS em três categorias:
+      • principal → "vendas" = compradores únicos (e-mail) do produto principal
+      • upsell    → comprado junto com o principal; só receita (+contador)
+      • downsell  → campanha à parte; compradores únicos (e-mail), contados separadamente
+    Receita = tudo. Ticket = receita total ÷ compradores do principal (regra do cliente).
+    Sem coluna de e-mail, cai para contagem de linhas."""
+    upsells = upsells or []; downsells = downsells or []
     df = df.sort_values("date").copy()
     ini = df["date"].min().normalize()
     df["_dia"] = (df["date"].dt.normalize() - ini).dt.days + 1
+    ndias = int(df["_dia"].max())
 
     prod_s = _txt(df["produto"]).str.strip() if "produto" in df.columns else pd.Series([""]*len(df), index=df.index)
-    df["_up"] = prod_s.isin(upsells) if upsells else False
-    df["_n"]  = (~df["_up"]).astype(int)
+    df["_up"] = prod_s.isin(upsells)   if upsells   else False
+    df["_dw"] = prod_s.isin(downsells) if downsells else False
+    df["_mn"] = ~(df["_up"] | df["_dw"])
+    df["_n"]  = df["_mn"].astype(int)          # tabelas (pgto/canal) contam só principal
     tem_email = "email" in df.columns
-    if tem_email:
-        df["_email"] = _txt(df["email"]).str.strip().str.lower()
-        # e-mail + categoria: comprador do principal e do downsell contam separadamente
-        df["_cat"]  = prod_s.isin(DOWNSELL_PRODUTOS).map({True: "downsell", False: "main"}) if DOWNSELL_PRODUTOS else "main"
-        df["_ckey"] = df["_email"] + "|" + df["_cat"].astype(str)
-    usa_comprador = bool(upsells) and tem_email
+    if tem_email: df["_email"] = _txt(df["email"]).str.strip().str.lower()
 
-    g_r = df.groupby("_dia")["price"].sum()
-    if usa_comprador:
-        dfp = df[~df["_up"]]
-        g_v = dfp.groupby("_dia")["_ckey"].nunique()
-    else:
-        g_v = df.groupby("_dia").size()
-    ndias = int(df["_dia"].max())
-    vendas = [int(g_v.get(i, 0)) for i in range(1, ndias+1)]
-    receita = [round(float(g_r.get(i, 0.0)), 2) for i in range(1, ndias+1)]
-    cum_v, cum_r, av, ar = [], [], 0, 0.0
+    def _por_dia(mask, unico):
+        sub = df[mask]
+        if len(sub) == 0: return {}
+        g = sub.groupby("_dia")["_email"].nunique() if (unico and tem_email) else sub.groupby("_dia").size()
+        return g.to_dict()
+    def _total(mask, unico):
+        sub = df[mask]
+        return int(sub["_email"].nunique()) if (unico and tem_email) else int(len(sub))
+
+    g_v = _por_dia(df["_mn"], True)    # compradores do principal
+    g_d = _por_dia(df["_dw"], True)    # compradores do downsell
+    g_u = _por_dia(df["_up"], False)   # upsells (linhas)
+    g_r = df.groupby("_dia")["price"].sum().to_dict()
+
+    vendas    = [int(g_v.get(i, 0)) for i in range(1, ndias+1)]
+    downs     = [int(g_d.get(i, 0)) for i in range(1, ndias+1)]
+    ups       = [int(g_u.get(i, 0)) for i in range(1, ndias+1)]
+    receita   = [round(float(g_r.get(i, 0.0)), 2) for i in range(1, ndias+1)]
+    cum_v, cum_d, cum_r, av, ad, ar = [], [], [], 0, 0, 0.0
     for i in range(ndias):
-        av += vendas[i]; ar += receita[i]
-        cum_v.append(av); cum_r.append(round(ar, 2))
+        av += vendas[i]; ad += downs[i]; ar += receita[i]
+        cum_v.append(av); cum_d.append(ad); cum_r.append(round(ar, 2))
 
-    # data de calendário de cada dia do lançamento
     datas = [(ini + pd.Timedelta(days=i)).strftime("%d/%m") for i in range(ndias)]
 
-    # pagamento e canal — v conta só principal (compradores); r soma tudo
     def _agg(serie, label_vazio):
-        s = _txt(serie).str.strip().replace({"": label_vazio, "nan": label_vazio})
-        a = df.assign(_k=s).groupby("_k").agg(v=("_n", "sum"), r=("price", "sum")).reset_index().sort_values("v", ascending=False)
+        sv = _txt(serie).str.strip().replace({"": label_vazio, "nan": label_vazio})
+        a = df.assign(_k=sv).groupby("_k").agg(v=("_n", "sum"), r=("price", "sum")).reset_index().sort_values("v", ascending=False)
         return [{"n": str(x["_k"]), "v": int(x["v"]), "r": round(float(x["r"]), 2)} for _, x in a.iterrows()]
-
-    pgto_s = _txt(df["pgto_raw"]).apply(_norm_pgto)
+    pgto_s  = _txt(df["pgto_raw"]).apply(_norm_pgto)
     canal_s = _txt(df["sck"]).str.split("|").str[0]
 
-    # vendas por hora do dia (só principal)
     horas = [0]*24
-    for h in df.loc[~df["_up"], "date"].dt.hour:
-        horas[int(h)] += 1
+    for h in df.loc[df["_mn"], "date"].dt.hour: horas[int(h)] += 1
 
+    tot_v = _total(df["_mn"], True); tot_d = _total(df["_dw"], True); tot_u = int(df["_up"].sum())
     tot_r = round(float(df["price"].sum()), 2)
-    tot_v = int(df.loc[~df["_up"], "_ckey"].nunique()) if usa_comprador else int(len(df))
-    ups_n = int(df["_up"].sum())
+    r_main = round(float(df.loc[df["_mn"], "price"].sum()), 2)
+    r_down = round(float(df.loc[df["_dw"], "price"].sum()), 2)
+    r_up   = round(float(df.loc[df["_up"], "price"].sum()), 2)
     return {
         "cod": cod, "label": label, "cor": cor, "atual": bool(atual),
         "ini": ini.strftime("%d/%m/%Y"), "fim": df["date"].max().strftime("%d/%m/%Y"),
-        "dias": ndias, "vendas": tot_v, "upsells": ups_n, "receita": tot_r,
-        "ticket": round(tot_r/tot_v, 2) if tot_v else 0,
+        "dias": ndias,
+        "vendas": tot_v, "upsells": tot_u, "downsells": tot_d,
+        "receita": tot_r, "receita_main": r_main, "receita_down": r_down, "receita_up": r_up,
+        # ticket do comprador principal: (principal + upsells) ÷ compradores — downsell é outro público
+        "ticket": round((r_main + r_up)/tot_v, 2) if tot_v else 0,
         "pico": {"dia": int(vendas.index(max(vendas)))+1, "v": max(vendas)} if vendas else None,
-        "serie": {"datas": datas, "vendas": vendas, "receita": receita, "cum_v": cum_v, "cum_r": cum_r},
+        "serie": {"datas": datas, "vendas": vendas, "downsells": downs, "upsells": ups, "receita": receita,
+                  "cum_v": cum_v, "cum_d": cum_d, "cum_r": cum_r},
         "pgto": _agg(pgto_s, "Outro"), "canal": _agg(canal_s, "Sem rastreio"), "horas": horas,
     }
 
@@ -881,12 +892,12 @@ def lancamentos_data(excluir_produtos=None):
         if len(df) == 0:
             print(f"     ⚠ {cfg['cod']}: sem vendas válidas na aba '{aba}'"); continue
 
-        # upsells: o lançamento "atual" usa UPSELL_PRODUTOS (vendas = compradores únicos);
-        # os anteriores ficam sem, mantendo a contagem por linha já aprovada. Sobrescreva
-        # com a chave "upsells" no LANCAMENTOS_COMPARAR se quiser.
-        ups = cfg.get("upsells")
-        if ups is None: ups = UPSELL_PRODUTOS if cfg.get("atual") else []
-        s = _serie_lancamento(df, cfg["cod"], cfg.get("label", cfg["cod"]), cfg.get("cor", "#94a3b8"), cfg.get("atual", False), upsells=ups)
+        # Categorias por lançamento: por padrão usa as listas globais (UPSELL_PRODUTOS /
+        # DOWNSELL_PRODUTOS); as chaves "upsells" / "downsells" no LANCAMENTOS_COMPARAR sobrescrevem.
+        ups = cfg.get("upsells",   UPSELL_PRODUTOS)
+        dws = cfg.get("downsells", DOWNSELL_PRODUTOS)
+        s = _serie_lancamento(df, cfg["cod"], cfg.get("label", cfg["cod"]), cfg.get("cor", "#94a3b8"),
+                              cfg.get("atual", False), upsells=ups, downsells=dws)
 
         # receita oficial: fixa o total e reescala a curva diária (contagens não mudam)
         alvo = cfg.get("receita")
@@ -896,12 +907,14 @@ def lancamentos_data(excluir_produtos=None):
             s["serie"]["cum_r"]   = [round(v * f, 2) for v in s["serie"]["cum_r"]]
             for grp in ("pgto", "canal"):
                 for it in s[grp]: it["r"] = round(it["r"] * f, 2)
+            for k in ("receita_main", "receita_down", "receita_up"): s[k] = round(s[k] * f, 2)
             print(f"     {cfg['cod']}: receita ajustada R${s['receita']:,.2f} → R${float(alvo):,.2f} (fator {f:.4f})")
             s["receita"] = round(float(alvo), 2)
-            s["ticket"]  = round(float(alvo) / s["vendas"], 2) if s["vendas"] else 0
+            s["ticket"]  = round((s["receita_main"] + s["receita_up"]) / s["vendas"], 2) if s["vendas"] else 0
 
         out.append(s)
-        print(f"     ✓ {cfg['cod']}: {s['vendas']} vendas | R${s['receita']:,.2f} | {s['dias']} dia(s) | início {s['ini']}")
+        extra = (f" | +{s['upsells']} upsell" if s['upsells'] else "") + (f" | +{s['downsells']} downsell" if s['downsells'] else "")
+        print(f"     ✓ {cfg['cod']}: {s['vendas']} compradores{extra} | R${s['receita']:,.2f} | {s['dias']} dia(s) | início {s['ini']}")
 
     if not out:
         print("  ⚠ Nenhum lançamento com dados — menu Comparativo não aparecerá."); return None
@@ -1213,7 +1226,7 @@ def main():
         print("  (desativado)")
 
     print("\n[COMPARATIVO]")
-    lancs = lancamentos_data(excluir_produtos=None if COMPARATIVO_INCLUI_DOWNSELL else _excl) if USAR_COMPARATIVO else None
+    lancs = lancamentos_data() if USAR_COMPARATIVO else None   # lê tudo e separa principal/upsell/downsell
 
     print("\n[COMPARAÇÃO LP + CTV]")
     try:
