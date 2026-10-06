@@ -571,8 +571,8 @@ details.desk-only{display:block!important;}
       <div class="cc mb14">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:6px">
           <div>
-            <div class="cc-t">Vendas por Dia do Lançamento</div>
-            <div class="cc-s">Linhas sobrepostas · D1 = abertura do carrinho de cada lançamento</div>
+            <div class="cc-t">Compradores por Dia do Lançamento</div>
+            <div class="cc-s">Produto principal · D1 = abertura do carrinho de cada lançamento · receita inclui tudo</div>
           </div>
           <div id="cmpModoPills" style="display:inline-flex;gap:2px;background:var(--surface2);padding:3px;border-radius:8px;border:1px solid var(--border);flex-wrap:wrap">
             <button class="pb active" onclick="setCmpModo('vendas',this)">Vendas/dia</button>
@@ -600,7 +600,7 @@ details.desk-only{display:block!important;}
 
       <!-- Tabela dia a dia -->
       <div class="section">
-        <div class="sec-hd">Dia a Dia · vendas (acumulado)</div>
+        <div class="sec-hd">Dia a Dia · compradores do principal (acumulado)</div>
         <div class="tc" id="cmpTblDias"></div>
       </div>
     </div>
@@ -2366,7 +2366,7 @@ function renderComparativo(){
   const dAt=atual.dias;
 
   document.getElementById('cmpSub').textContent=
-    L.map(l=>l.cod+' ('+l.vendas+' vendas)').join('  ×  ');
+    L.map(l=>l.cod+' ('+l.vendas+' compradores'+(l.downsells?' +'+l.downsells+' downsell':'')+')').join('  ×  ');
 
   // ── KPIs por lançamento ──
   document.getElementById('cmpLctKpis').innerHTML=L.map(l=>{
@@ -2374,35 +2374,41 @@ function renderComparativo(){
     return '<div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid '+l.cor+';border-radius:var(--r);padding:12px 14px;box-shadow:var(--sh)">'+
       '<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:8px">'+
         '<div style="font-size:11px;font-weight:700;color:'+l.cor+'">'+l.label+'</div>'+badge+'</div>'+
-      '<div style="font-size:22px;font-weight:700;line-height:1;margin-bottom:2px">'+fN(l.vendas)+(l.upsells?'<span style="font-size:11px;font-weight:700;color:#8b5cf6;margin-left:6px">+'+l.upsells+' upsell'+(l.upsells!==1?'s':'')+'</span>':'')+'</div>'+
-      '<div style="font-size:10px;color:var(--muted);margin-bottom:8px">'+(l.upsells?'compradores':'vendas aprovadas')+'</div>'+
+      '<div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:2px">'+
+        '<div style="font-size:22px;font-weight:700;line-height:1">'+fN(l.vendas)+'</div>'+
+        (l.upsells?'<span style="font-size:9px;font-weight:700;background:#8b5cf622;color:#8b5cf6;padding:2px 7px;border-radius:4px;white-space:nowrap">+'+l.upsells+' upsell'+(l.upsells!==1?'s':'')+'</span>':'')+
+        (l.downsells?'<span style="font-size:9px;font-weight:700;background:#0d948822;color:#0d9488;padding:2px 7px;border-radius:4px;white-space:nowrap">+'+l.downsells+' downsell'+(l.downsells!==1?'s':'')+'</span>':'')+
+      '</div>'+
+      '<div style="font-size:10px;color:var(--muted);margin-bottom:8px">compradores do produto principal</div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 8px;font-size:10px">'+
-        '<div><div style="color:var(--muted2)">Receita</div><div style="font-weight:700;font-family:\'DM Mono\',monospace">'+fR(l.receita)+'</div></div>'+
-        '<div><div style="color:var(--muted2)">Ticket médio</div><div style="font-weight:700;font-family:\'DM Mono\',monospace">'+fR(l.ticket)+'</div></div>'+
+        '<div><div style="color:var(--muted2)">Receita total</div><div style="font-weight:700;font-family:\'DM Mono\',monospace">'+fR(l.receita)+'</div>'+
+          ((l.downsells||l.upsells)?'<div style="font-size:9px;color:var(--muted2);margin-top:1px">principal '+fR(l.receita_main)+(l.upsells?' · <span style="color:#8b5cf6">upsell '+fR(l.receita_up)+'</span>':'')+(l.downsells?' · <span style="color:#0d9488">downsell '+fR(l.receita_down)+'</span>':'')+'</div>':'')+
+        '</div>'+
+        '<div><div style="color:var(--muted2)">Ticket · principal</div><div style="font-weight:700;font-family:\'DM Mono\',monospace">'+fR(l.ticket)+'</div><div style="font-size:9px;color:var(--muted2);margin-top:1px">(principal + upsell) ÷ compradores</div></div>'+
         '<div><div style="color:var(--muted2)">Período</div><div style="font-weight:600">'+l.ini+' → '+l.fim+'</div></div>'+
-        '<div><div style="color:var(--muted2)">Pico</div><div style="font-weight:600">D'+l.pico.dia+' · '+l.pico.v+' vendas</div></div>'+
+        '<div><div style="color:var(--muted2)">Pico · principal</div><div style="font-weight:600">D'+l.pico.dia+' · '+l.pico.v+' compradores</div></div>'+
       '</div></div>';
   }).join('');
 
   // ── Ritmo: todos no mesmo dia do lançamento ──
-  function ate(l,d){const i=Math.min(d,l.dias)-1;return {v:l.serie.cum_v[i],r:l.serie.cum_r[i],completo:l.dias>=d};}
+  function ate(l,d){const i=Math.min(d,l.dias)-1;return {v:l.serie.cum_v[i],d:(l.serie.cum_d||[])[i]||0,r:l.serie.cum_r[i],completo:l.dias>=d};}
   const aAt=ate(atual,dAt);
   let ritmo='<div class="cc-t">Ritmo até o D'+dAt+'</div>'+
-    '<div class="cc-s">Comparação no mesmo ponto da jornada — '+atual.cod+' está no dia '+dAt+' de vendas</div>'+
+    '<div class="cc-s">Compradores do produto principal no mesmo ponto da jornada — '+atual.cod+' está no dia '+dAt+'. Downsell fica fora da comparação.</div>'+
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:12px">';
   L.forEach(l=>{
     const a=ate(l,dAt);
     const eh=l.cod===atual.cod;
     ritmo+='<div style="padding:10px 12px;border-radius:var(--r);background:var(--surface2);border:1px solid '+(eh?l.cor+'55':'var(--border)')+'">'+
       '<div style="font-size:10px;font-weight:700;color:'+l.cor+';margin-bottom:4px">'+l.cod+(a.completo?'':' <span style="color:var(--muted2);font-weight:400">(só '+l.dias+'d)</span>')+'</div>'+
-      '<div style="font-size:18px;font-weight:700">'+fN(a.v)+'</div>'+
-      '<div style="font-size:10px;color:var(--muted);margin-bottom:4px">vendas até o D'+dAt+'</div>'+
+      '<div style="font-size:18px;font-weight:700">'+fN(a.v)+(a.d?'<span style="font-size:9px;font-weight:700;color:#0d9488;margin-left:6px">+'+a.d+' downsell</span>':'')+'</div>'+
+      '<div style="font-size:10px;color:var(--muted);margin-bottom:4px">compradores até o D'+dAt+'</div>'+
       '<div style="font-size:10px;font-family:\'DM Mono\',monospace;color:var(--muted2);margin-bottom:'+(eh?'0':'4px')+'">'+fR(a.r)+'</div>'+
       (eh?'':'<div style="font-size:9px;color:var(--muted2);border-top:1px dashed var(--border);padding-top:4px">'+atual.cod+' '+cmpDelta(aAt.v,a.v)+' vs. este</div>')+
     '</div>';
   });
   ritmo+='</div>';
-  if(L.length>1) ritmo+='<div style="font-size:10px;color:var(--muted2);margin-top:10px">O percentual compara '+atual.cod+' com cada lançamento anterior no mesmo dia de carrinho.</div>';
+  if(L.length>1) ritmo+='<div style="font-size:10px;color:var(--muted2);margin-top:10px">O percentual compara os compradores do produto principal de '+atual.cod+' com cada lançamento anterior no mesmo dia de carrinho — upsell e downsell não entram.</div>';
   document.getElementById('cmpRitmo').innerHTML=ritmo;
 
   // ── Gráfico ──
