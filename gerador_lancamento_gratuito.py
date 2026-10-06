@@ -59,13 +59,12 @@ VALOR_LIQUIDO_ABA = None          # aponte à aba de fechamento quando o RDC04 e
 
 # UPSELLS — comprados JUNTO com o produto principal. Entram na receita bruta e no ticket,
 # mas NÃO contam como "vendas": vendas = compradores únicos (e-mail) do produto principal.
-UPSELL_PRODUTOS   = ["poplist", "Guia de Adequação à RDC 1002/2025"]
+UPSELL_PRODUTOS   = ["poplist"]
 
-# DOWNSELL — campanha separada (vem DEPOIS no RDC04). Por ora vazio; Guia é upsell.
-# Quando a campanha de downsell começar: preencher a lista e ligar USAR_DOWNSELL/USAR_TOTAIS.
-DOWNSELL_PRODUTOS = []
-USAR_DOWNSELL     = False        # entra depois, com a campanha de downsell
-USAR_TOTAIS       = False        # entra depois, junto com o downsell
+# DOWNSELL — campanha separada (começou em 05/10 no RDC04). Guia saiu de upsell → downsell.
+DOWNSELL_PRODUTOS = ["Guia de Adequação à RDC 1002/2025"]
+USAR_DOWNSELL     = True         # campanha de downsell ativa
+USAR_TOTAIS       = True         # principais + downsell
 COMPARATIVO_INCLUI_DOWNSELL = True  # True = RDC03 entra no comparativo com o downsell (faturamento cheio)
 
 
@@ -654,7 +653,11 @@ def hotmart_data(excluir_produtos=None, apenas_produtos=None, rotulo="hotmart"):
         df["_up"] = prod_s.isin(UPSELL_PRODUTOS) if UPSELL_PRODUTOS else False
         df["_n"]  = (~df["_up"]).astype(int)
         df["_email"] = _txt(df["email"]).str.strip().str.lower()
-        compradores   = int(df.loc[~df["_up"], "_email"].nunique())
+        # chave de comprador = e-mail + categoria (principal | downsell). A mesma pessoa que
+        # compra o principal E o downsell conta 1 em cada seção, e "principais + downsell = total" fecha.
+        df["_cat"]  = prod_s.isin(DOWNSELL_PRODUTOS).map({True: "downsell", False: "main"}) if DOWNSELL_PRODUTOS else "main"
+        df["_ckey"] = df["_email"] + "|" + df["_cat"].astype(str)
+        compradores   = int(df.loc[~df["_up"], "_ckey"].nunique())
         upsells_total = int(df["_up"].sum())
         if upsells_total:
             print(f"     {compradores} comprador(es) do principal + {upsells_total} upsell(s)")
@@ -663,7 +666,7 @@ def hotmart_data(excluir_produtos=None, apenas_produtos=None, rotulo="hotmart"):
         dias_all = df["date"].dt.normalize()
         dg_r = df.groupby(dias_all)["price"].sum()
         dfp  = df[~df["_up"]]
-        dg_v = dfp.groupby(dfp["date"].dt.normalize())["_email"].nunique() if len(dfp) else pd.Series(dtype=int)
+        dg_v = dfp.groupby(dfp["date"].dt.normalize())["_ckey"].nunique() if len(dfp) else pd.Series(dtype=int)
         dfu  = df[df["_up"]]
         dg_u = dfu.groupby(dfu["date"].dt.normalize()).size() if len(dfu) else pd.Series(dtype=int)
         all_days = sorted(dg_r.index)
@@ -790,13 +793,17 @@ def _serie_lancamento(df, cod, label, cor, atual, upsells=None):
     df["_up"] = prod_s.isin(upsells) if upsells else False
     df["_n"]  = (~df["_up"]).astype(int)
     tem_email = "email" in df.columns
-    if tem_email: df["_email"] = _txt(df["email"]).str.strip().str.lower()
+    if tem_email:
+        df["_email"] = _txt(df["email"]).str.strip().str.lower()
+        # e-mail + categoria: comprador do principal e do downsell contam separadamente
+        df["_cat"]  = prod_s.isin(DOWNSELL_PRODUTOS).map({True: "downsell", False: "main"}) if DOWNSELL_PRODUTOS else "main"
+        df["_ckey"] = df["_email"] + "|" + df["_cat"].astype(str)
     usa_comprador = bool(upsells) and tem_email
 
     g_r = df.groupby("_dia")["price"].sum()
     if usa_comprador:
         dfp = df[~df["_up"]]
-        g_v = dfp.groupby("_dia")["_email"].nunique()
+        g_v = dfp.groupby("_dia")["_ckey"].nunique()
     else:
         g_v = df.groupby("_dia").size()
     ndias = int(df["_dia"].max())
@@ -825,7 +832,7 @@ def _serie_lancamento(df, cod, label, cor, atual, upsells=None):
         horas[int(h)] += 1
 
     tot_r = round(float(df["price"].sum()), 2)
-    tot_v = int(df.loc[~df["_up"], "_email"].nunique()) if usa_comprador else int(len(df))
+    tot_v = int(df.loc[~df["_up"], "_ckey"].nunique()) if usa_comprador else int(len(df))
     ups_n = int(df["_up"].sum())
     return {
         "cod": cod, "label": label, "cor": cor, "atual": bool(atual),
