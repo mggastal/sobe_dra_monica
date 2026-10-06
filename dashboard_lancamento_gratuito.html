@@ -91,6 +91,9 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 .cc-s{font-size:11px;color:var(--muted);margin-bottom:10px;}
 .cw{position:relative;width:100%;overflow:hidden;}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+.cmp-cat{--cc:var(--hotmart);font-size:10px;font-weight:700;padding:5px 10px;border-radius:999px;border:1px solid var(--border);background:var(--surface2);color:var(--muted2);cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap;}
+.cmp-cat.active{background:var(--cc);border-color:var(--cc);color:#fff;}
+.cmp-cat:not(.active){opacity:.75;text-decoration:line-through;}
 .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px;}
 .g73{display:grid;grid-template-columns:7fr 3fr;gap:12px;margin-bottom:14px;}
 .mb14{margin-bottom:14px;}
@@ -198,6 +201,7 @@ details.desk-only{display:block!important;}
   .tc{overflow-x:auto;}
   #vendasHoraGrid{grid-template-columns:1fr!important;}
   #cmpLctKpis{grid-template-columns:1fr!important;}
+  #cmpCatPills{width:100%;}
   #cmpModoPills{width:100%;justify-content:flex-start;}
   #cmpTblDias table{min-width:420px;}
   #vendasHoraGrid>div canvas{max-height:90px;}
@@ -571,14 +575,21 @@ details.desk-only{display:block!important;}
       <div class="cc mb14">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:6px">
           <div>
-            <div class="cc-t">Compradores por Dia do Lançamento</div>
-            <div class="cc-s">Produto principal · D1 = abertura do carrinho de cada lançamento · receita inclui tudo</div>
+            <div class="cc-t" id="cmpChartTitle">Compradores por Dia do Lançamento</div>
+            <div class="cc-s" id="cmpChartSub">D1 = abertura do carrinho de cada lançamento</div>
           </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <div id="cmpCatPills" style="display:inline-flex;gap:4px;flex-wrap:wrap">
+              <button class="cmp-cat active" data-cat="main" onclick="toggleCmpCat('main',this)">● Principal</button>
+              <button class="cmp-cat active" data-cat="up"   onclick="toggleCmpCat('up',this)"   style="--cc:#8b5cf6">● Upsell</button>
+              <button class="cmp-cat active" data-cat="down" onclick="toggleCmpCat('down',this)" style="--cc:#0d9488">● Downsell</button>
+            </div>
           <div id="cmpModoPills" style="display:inline-flex;gap:2px;background:var(--surface2);padding:3px;border-radius:8px;border:1px solid var(--border);flex-wrap:wrap">
             <button class="pb active" onclick="setCmpModo('vendas',this)">Vendas/dia</button>
             <button class="pb" onclick="setCmpModo('acum',this)">Acumulado</button>
             <button class="pb" onclick="setCmpModo('receita',this)">Receita/dia</button>
             <button class="pb" onclick="setCmpModo('receita_acum',this)">Receita acum.</button>
+          </div>
           </div>
         </div>
         <div class="cw" style="height:270px"><canvas id="chCmpLct"></canvas></div>
@@ -2345,6 +2356,18 @@ function renderComp(){
 
 // ═══ COMPARATIVO DE LANÇAMENTOS ═══
 let cmpModo='vendas';
+const cmpCats={main:true,up:true,down:true};
+function toggleCmpCat(c,btn){
+  const ligados=Object.values(cmpCats).filter(Boolean).length;
+  if(cmpCats[c]&&ligados<=1) return;          // mantém pelo menos uma categoria
+  cmpCats[c]=!cmpCats[c];
+  if(btn) btn.classList.toggle('active',cmpCats[c]);
+  renderComparativo();
+}
+function cmpCatLabel(){
+  const n={main:'Principal',up:'Upsell',down:'Downsell'};
+  return Object.keys(cmpCats).filter(k=>cmpCats[k]).map(k=>n[k]).join(' + ');
+}
 function setCmpModo(m,btn){
   cmpModo=m;
   document.querySelectorAll('#cmpModoPills .pb').forEach(b=>b.classList.remove('active'));
@@ -2412,11 +2435,25 @@ function renderComparativo(){
   document.getElementById('cmpRitmo').innerHTML=ritmo;
 
   // ── Gráfico ──
-  const campo={vendas:'vendas',acum:'cum_v',receita:'receita',receita_acum:'cum_r'}[cmpModo];
   const acumulado=(cmpModo==='acum'||cmpModo==='receita_acum');
   const dinheiro=(cmpModo==='receita'||cmpModo==='receita_acum');
+  // série diária de um lançamento = soma das categorias marcadas (principal / upsell / downsell)
+  function serieFiltrada(l){
+    const S=l.serie, n=S.vendas.length;
+    const partes=[];
+    if(cmpCats.main) partes.push(dinheiro?(S.rec_main||S.receita):S.vendas);
+    if(cmpCats.up)   partes.push(dinheiro?(S.rec_up||[]):(S.upsells||[]));
+    if(cmpCats.down) partes.push(dinheiro?(S.rec_down||[]):(S.downsells||[]));
+    const dia=Array.from({length:n},(_,i)=>partes.reduce((a,p)=>a+(p[i]||0),0));
+    if(!acumulado) return dia.map(v=>dinheiro?Math.round(v*100)/100:v);
+    let acc=0; return dia.map(v=>{acc+=v;return dinheiro?Math.round(acc*100)/100:acc;});
+  }
+  const catTxt=cmpCatLabel();
+  const tEl=document.getElementById('cmpChartTitle'), sEl=document.getElementById('cmpChartSub');
+  if(tEl) tEl.textContent=(dinheiro?'Receita':'Compradores')+' por Dia do Lançamento';
+  if(sEl) sEl.textContent=catTxt+' · D1 = abertura do carrinho de cada lançamento';
   const ds=L.map(l=>{
-    const base=l.serie[campo];
+    const base=serieFiltrada(l);
     const data=[];
     for(let i=0;i<maxD;i++){
       if(i<base.length) data.push(base[i]);
@@ -2441,7 +2478,7 @@ function renderComparativo(){
             const l=ctx.dataset._l, i=ctx.dataIndex;
             const dt=l.serie.datas[i]?' ('+l.serie.datas[i]+')':'';
             if(ctx.raw==null) return null;
-            return ' '+l.cod+dt+': '+(dinheiro?fR(ctx.raw):fN(ctx.raw)+(acumulado?' acum.':' venda'+(ctx.raw!==1?'s':'')));
+            return ' '+l.cod+dt+': '+(dinheiro?fR(ctx.raw):fN(ctx.raw)+(acumulado?' acum.':''));
           }
         }}},
       scales:{x:{ticks:{color:TXT(),font:bf,maxTicksLimit:20},grid:{color:GRID()}},
@@ -2473,14 +2510,19 @@ function renderComparativo(){
   blocoDist('cmpPgto','pgto',6);
   blocoDist('cmpCanal','canal',8);
 
-  // ── Tabela dia a dia ──
+  // ── Tabela dia a dia (segue o filtro de categoria; sempre em contagem) ──
+  const tblHd=document.querySelector('#page-comparativo .section .sec-hd');
+  if(tblHd) tblHd.textContent='Dia a Dia · '+catTxt+' (acumulado)';
+  const dinheiroBak=dinheiro; // tabela sempre em quantidade
+  function serieQtd(l){ const S=l.serie,n=S.vendas.length,p=[]; if(cmpCats.main)p.push(S.vendas); if(cmpCats.up)p.push(S.upsells||[]); if(cmpCats.down)p.push(S.downsells||[]); return Array.from({length:n},(_,i)=>p.reduce((a,x)=>a+(x[i]||0),0)); }
   let t='<table><thead><tr><th>Dia</th>'+
     L.map(l=>'<th class="num" style="color:'+l.cor+'">'+l.cod+'</th>').join('')+'</tr></thead><tbody>';
+  const qtdPorL=L.map(l=>{const q=serieQtd(l);let a=0;return {q,cum:q.map(v=>a+=v)};});
   for(let i=0;i<maxD;i++){
     t+='<tr><td style="font-size:11px;padding:6px 10px;font-weight:700">D'+(i+1)+'</td>';
-    L.forEach(l=>{
+    L.forEach((l,li)=>{
       if(i>=l.dias){ t+='<td class="num" style="font-size:11px;padding:6px 10px;color:var(--muted2)">—</td>'; return; }
-      const v=l.serie.vendas[i], ac=l.serie.cum_v[i], dt=l.serie.datas[i];
+      const v=qtdPorL[li].q[i], ac=qtdPorL[li].cum[i], dt=l.serie.datas[i];
       t+='<td class="num" style="font-size:11px;padding:6px 10px" title="'+dt+'">'+
          '<span style="font-weight:700;color:'+(v>0?'var(--text)':'var(--muted2)')+'">'+v+'</span>'+
          '<span style="font-size:9px;color:var(--muted2)"> ('+ac+')</span></td>';
@@ -2488,7 +2530,7 @@ function renderComparativo(){
     t+='</tr>';
   }
   t+='<tr style="border-top:2px solid var(--border);background:var(--surface2)"><td style="font-size:11px;padding:7px 10px;font-weight:700">Total</td>'+
-     L.map(l=>'<td class="num" style="font-size:11px;padding:7px 10px;font-weight:700;color:'+l.cor+'">'+fN(l.vendas)+'</td>').join('')+'</tr>';
+     L.map((l,li)=>'<td class="num" style="font-size:11px;padding:7px 10px;font-weight:700;color:'+l.cor+'">'+fN(qtdPorL[li].cum[qtdPorL[li].cum.length-1]||0)+'</td>').join('')+'</tr>';
   document.getElementById('cmpTblDias').innerHTML=t+'</tbody></table>';
 }
 
