@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title id="pageTab">Dashboard</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <style>
@@ -21,8 +21,8 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 /* SIDEBAR */
 .sb{background:#0f1523;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;}
 .sb-logo{display:flex;align-items:center;gap:10px;padding:18px 16px 14px;border-bottom:1px solid rgba(255,255,255,.07);}
-.logo-box{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:#fff;flex-shrink:0;}
-.logo-name{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:#fff;}
+.logo-box{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'DM Sans',sans-serif;font-size:16px;font-weight:700;color:#fff;flex-shrink:0;}
+.logo-name{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;color:#fff;}
 .logo-sub{font-size:10px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1.5px;}
 .sb-nav{padding:10px 8px;flex:1;}
 .sb-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:7px;cursor:pointer;color:rgba(255,255,255,.4);font-size:12px;font-weight:500;transition:all .15s;margin-bottom:2px;border:none;background:none;width:100%;text-align:left;font-family:'DM Sans',sans-serif;}
@@ -31,7 +31,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 .sb-item .ico{font-size:13px;width:18px;text-align:center;}
 .sb-lct{margin:0 16px 12px;padding:7px 10px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);}
 .sb-lct-lbl{font-size:9px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;}
-.sb-lct-val{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:#fff;}
+.sb-lct-val{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;color:#fff;}
 .sb-footer{padding:10px 16px;border-top:1px solid rgba(255,255,255,.05);}
 .sb-footer span{font-size:10px;color:rgba(255,255,255,.25);}
 
@@ -39,7 +39,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 .main{display:flex;flex-direction:column;overflow-x:hidden;}
 .topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:9px 20px;display:flex;align-items:center;justify-content:space-between;position:fixed;top:0;left:210px;right:0;z-index:9000;box-shadow:0 2px 8px rgba(0,0,0,.12);gap:8px;flex-wrap:wrap;}
 .topbar-l{display:flex;align-items:center;gap:8px;flex-shrink:0;}
-.page-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;}
+.page-title{font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;}
 .live-badge{display:flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;}
 .pulse{width:5px;height:5px;border-radius:50%;animation:pulse 2s infinite;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
@@ -69,12 +69,12 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 .kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:13px 15px;position:relative;overflow:hidden;box-shadow:var(--sh);}
 .kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--kc,#e2e8f0);}
 .kpi-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;font-weight:600;margin-bottom:5px;}
-.kpi-val{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;line-height:1;color:var(--kc,var(--text));margin-bottom:2px;}
+.kpi-val{font-family:'DM Sans',sans-serif;font-size:20px;font-weight:700;line-height:1;color:var(--kc,var(--text));margin-bottom:2px;}
 .kpi-sub{font-size:10px;color:var(--muted);}
 
 /* FUNIL */
 .funnel-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px 22px;margin-bottom:14px;box-shadow:var(--sh);}
-.funnel-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:16px;}
+.funnel-title{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;margin-bottom:16px;}
 .funnel-steps{display:flex;flex-direction:column;gap:0;}
 .f-step{display:flex;flex-direction:column;}
 .f-bar{height:40px;border-radius:7px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;transition:width .4s;min-width:110px;}
@@ -83,11 +83,11 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 .f-bar-val{font-family:'DM Mono',monospace;font-size:14px;font-weight:700;color:#fff;}
 .f-between{display:flex;align-items:center;gap:8px;padding:4px 0 4px 12px;}
 .f-arrow{color:var(--muted2);font-size:14px;}
-.f-rate-txt{font-size:13px;font-weight:800;padding:2px 10px;border-radius:20px;}
+.f-rate-txt{font-size:13px;font-weight:700;padding:2px 10px;border-radius:20px;}
 
 /* CHARTS */
 .cc{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:15px;box-shadow:var(--sh);min-width:0;overflow:hidden;}
-.cc-t{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;margin-bottom:2px;}
+.cc-t{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;margin-bottom:2px;}
 .cc-s{font-size:11px;color:var(--muted);margin-bottom:10px;}
 .cw{position:relative;width:100%;overflow:hidden;}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
@@ -99,12 +99,12 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 .daily-row{display:grid;grid-template-columns:72px 1fr;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh);margin-bottom:10px;}
 .daily-side{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px 8px;border-right:1px solid var(--border);background:var(--surface2);}
 .ds-lbl{font-size:8px;color:var(--muted2);text-transform:uppercase;letter-spacing:.8px;font-weight:700;margin-bottom:3px;text-align:center;}
-.ds-val{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;text-align:center;}
+.ds-val{font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;text-align:center;}
 .daily-main{padding:12px 14px 10px 10px;}
-.daily-ttl{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px;}
+.daily-ttl{font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px;}
 
 /* SECTION */
-.sec-hd{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:10px;}
+.sec-hd{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;margin-bottom:10px;}
 .section{margin-bottom:20px;}
 
 /* TABELAS */
@@ -138,7 +138,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 .seg-card thead th.num{text-align:right;}
 .seg-card tbody td{padding:6px 10px;font-size:11px;border-bottom:1px solid var(--border);}
 .seg-card tbody tr:last-child td{border-bottom:none;}
-.seg-ttl{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;margin-bottom:8px;}
+.seg-ttl{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;margin-bottom:8px;}
 
 /* PIZZA */
 .pizza-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-bottom:14px;}
@@ -154,7 +154,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 /* PESQUISA FILTROS */
 .pes-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
 .filter-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:14px;box-shadow:var(--sh);}
-.filter-box-ttl{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;}
+.filter-box-ttl{font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;}
 .utm-groups{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 .utm-grp-lbl{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;}
 .utm-list{display:flex;flex-direction:column;gap:2px;max-height:180px;overflow-y:auto;}
@@ -228,7 +228,7 @@ details.desk-only{display:block!important;}
 .cmp-table tbody td:first-child{text-align:left;font-family:'DM Sans',sans-serif;font-size:9px;font-weight:600;color:var(--muted);overflow:hidden;text-overflow:ellipsis;max-width:130px;}
 .cmp-table tbody tr:last-child td{border-bottom:none;}
 .cmp-table tbody tr:hover td{background:var(--surface2);}
-.cmp-winner{font-size:9px;font-weight:800;padding:1px 5px;border-radius:8px;background:#05966920;color:#059669;margin-left:3px;vertical-align:middle;}
+.cmp-winner{font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;background:#05966920;color:#059669;margin-left:3px;vertical-align:middle;}
 .cmp-camp-ttl{font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;margin-bottom:7px;display:flex;align-items:center;gap:7px;}
 @media(max-width:900px){.cmp-chart-row{grid-template-columns:1fr 1fr;}}
 @media(max-width:600px){.cmp-hero{grid-template-columns:1fr;}.cmp-chart-row{grid-template-columns:1fr 1fr;}.cmp-kpis{grid-template-columns:1fr 1fr;}}
@@ -328,8 +328,8 @@ details.desk-only{display:block!important;}
         <button class="pb" onclick="setPeriod(1,this)">Ontem</button>
         <button class="pb" onclick="setPeriod(7,this)">7d</button>
         <button class="pb" onclick="setPeriod(14,this)">14d</button>
-        <button class="pb active" onclick="setPeriod(30,this)">30d</button>
-        <button class="pb" onclick="setPeriod(0,this)">Tudo</button>
+        <button class="pb" onclick="setPeriod(30,this)">30d</button>
+        <button class="pb active" onclick="setPeriod(0,this)">Tudo</button>
       </div>
       <div class="date-range">
         <input type="date" id="dtI"><span>→</span><input type="date" id="dtF">
@@ -438,12 +438,12 @@ details.desk-only{display:block!important;}
     <div class="page-section" id="page-pesquisa">
       <div class="krow pes-kpis" id="pesKpis"></div>
       <div class="pes-daily-card" id="pesDailyCard" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;margin-bottom:14px;box-shadow:var(--sh)">
-        <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:2px">Respostas por Dia</div>
+        <div style="font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;margin-bottom:2px">Respostas por Dia</div>
         <div style="font-size:11px;color:var(--muted);margin-bottom:10px">adapta ao período e filtros selecionados</div>
         <div style="height:180px"><canvas id="chPesDaily"></canvas></div>
       </div>
             <details class="filter-box" style="padding:0">
-        <summary style="padding:12px 14px;cursor:pointer;font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:1px;list-style:none;display:flex;align-items:center;justify-content:space-between;user-select:none;">
+        <summary style="padding:12px 14px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:1px;list-style:none;display:flex;align-items:center;justify-content:space-between;user-select:none;">
           Filtrar respostas por origem <span style="font-size:13px;color:var(--muted2)">▾</span>
         </summary>
         <div style="padding:0 14px 12px;">
@@ -461,12 +461,12 @@ details.desk-only{display:block!important;}
     <!-- VENDAS LISTA -->
     <div class="page-section" id="page-vendas-lista">
       <div style="margin-bottom:16px">
-        <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700">Vendas Diárias</div>
+        <div style="font-family:'DM Sans',sans-serif;font-size:17px;font-weight:700">Vendas Diárias</div>
         <div style="font-size:12px;color:var(--muted)">Todas as vendas aprovadas · período do lançamento</div>
       </div>
       <!-- Análise Diária - gráficos por hora -->
       <div style="margin-bottom:6px">
-        <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:2px">Análise Diária</div>
+        <div style="font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;margin-bottom:2px">Análise Diária</div>
         <div style="font-size:11px;color:var(--muted2);margin-bottom:12px">Vendas acumuladas por horário em cada dia do lançamento</div>
         <div id="vendasHoraGrid" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:18px;max-width:100%;overflow:hidden"></div>
       </div>
@@ -492,7 +492,7 @@ details.desk-only{display:block!important;}
     <!-- VENDAS -->
     <div class="page-section" id="page-vendas">
       <div style="margin-bottom:16px">
-        <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700">Vendas</div>
+        <div style="font-family:'DM Sans',sans-serif;font-size:17px;font-weight:700">Vendas</div>
         <div style="font-size:12px;color:var(--muted)">Vendas aprovadas · período do lançamento</div>
       </div>
       <!-- KPIs -->
@@ -745,7 +745,7 @@ const CPM_BOM=5.0;
 const CPM_MEDIO=12.0;
 
 // ═══ ESTADO ═══
-let filtroLct=true, periodDays=30, dateI=null, dateF=null, showLabels=true, labelSize=8;
+let filtroLct=true, periodDays=0, dateI=null, dateF=null, showLabels=true, labelSize=8;
 let pesFilters={};
 
 // ═══ UTILS ═══
@@ -2172,7 +2172,7 @@ function renderComp(){
   function cplCls2(v){return v==null?'cn':v<=CPL_BOM?'cg':v<=CPL_MEDIO?'cw2':'cr';}
 
   function heroCard(t,c,label,ww){
-    const venc=ww?'<span style="font-size:9px;color:#059669;font-weight:800"> ✓ Vencedor</span>':'';
+    const venc=ww?'<span style="font-size:9px;color:#059669;font-weight:700"> ✓ Vencedor</span>':'';
     const cc=cplCls2(t.cpl);
     const campNames=(t.camps||[]).map(x=>x.n).join(' · ');
     return `<div class="cmp-card">
@@ -2759,5 +2759,6 @@ window.addEventListener('resize', ajustarPaddingContent);
     </div>
   </div>
 
+<script src="nav.js"></script>
 </body>
 </html>

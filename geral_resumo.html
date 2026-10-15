@@ -1,0 +1,58 @@
+<!-- Bloco "Resumo por iniciativa" injetado no topo da aba Meta do geral.html (gerador_perpetuo.py) -->
+<div id="geralResumo">
+  <div class="krow k4 mb14" id="grKpis"></div>
+  <div class="section mb14">
+    <div class="sec-hd">Resultados por iniciativa</div>
+    <div class="tc" id="grTabela"></div>
+    <div style="font-size:10px;color:var(--muted2);margin-top:6px;line-height:1.5">Receita dos lançamentos = total oficial usado no comparativo. Investimento = Meta Ads das campanhas com o código no nome. Perpétuo = vendas do POPList desde o início do perpétuo (todos os canais).</div>
+  </div>
+  <div class="g2">
+    <div class="cc"><div class="cc-t">Investimento × Receita</div><div class="cc-s">por iniciativa</div><div class="cw" style="height:230px"><canvas id="chGrIni"></canvas></div></div>
+    <div class="cc"><div class="cc-t">Investimento por mês</div><div class="cc-s">empilhado por iniciativa</div><div class="cw" style="height:230px"><canvas id="chGrMes"></canvas></div></div>
+  </div>
+</div>
+<script>
+const RESUMO = null;
+function renderResumoGeral(){
+  if(!RESUMO) return;
+  const L=RESUMO.linhas, fR0=v=>v==null?'—':'R$'+Math.round(v).toLocaleString('pt-BR');
+  const roasC=v=>v==null?'cn':v>=2?'cg':v>=1?'cw2':'cr';
+  const T=L.reduce((a,l)=>({sp:a.sp+(l.spend||0),rec:a.rec+(l.receita||0),v:a.v+(l.vendas||0),ld:a.ld+(l.leads||0)}),{sp:0,rec:0,v:0,ld:0});
+  const spAll=T.sp+(RESUMO.outros_spend||0), roasAll=spAll>0?r2(T.rec/spAll):null;
+  document.getElementById('grKpis').innerHTML=
+    `<div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Investimento total</div><div class="kpi-val" style="font-size:16px;color:var(--text)">${fR(spAll)}</div><div class="kpi-sub">Meta Ads · todas as campanhas</div></div>`+
+    `<div class="kpi" style="--kc:var(--hotmart)"><div class="kpi-lbl">Receita total</div><div class="kpi-val" style="font-size:16px;color:var(--hotmart)">${fR(T.rec)}</div><div class="kpi-sub">lançamentos + perpétuo</div></div>`+
+    `<div class="kpi" style="--kc:#059669"><div class="kpi-lbl">ROAS geral</div><div class="kpi-val" style="color:#059669">${roasAll!=null?roasAll.toFixed(2)+'x':'—'}</div><div class="kpi-sub">receita ÷ investimento</div></div>`+
+    `<div class="kpi" style="--kc:#3b82f6"><div class="kpi-lbl">Vendas</div><div class="kpi-val" style="color:var(--text)">${fN(T.v)}</div><div class="kpi-sub">${fN(T.ld)} leads nos lançamentos</div></div>`;
+  const th=l=>`<th class="num" style="font-size:9px;padding:7px 10px;color:var(--muted2)">${l}</th>`;
+  let h='<table style="min-width:820px"><thead><tr><th style="font-size:9px;padding:7px 10px;text-align:left;color:var(--muted2)">Iniciativa</th><th style="font-size:9px;padding:7px 10px;text-align:left;color:var(--muted2)">Período</th>'+
+    ['Invest.','Leads','CPL','Vendas','Receita','Ticket','ROAS'].map(th).join('')+'</tr></thead><tbody>';
+  L.forEach(l=>{
+    const nm=l.arquivo?`<a href="${l.arquivo}" style="color:inherit;text-decoration:none;border-bottom:1px dashed var(--muted2)">${l.label}</a>`:l.label;
+    h+=`<tr><td style="padding:8px 10px;font-weight:700;font-size:11px;white-space:nowrap"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${l.cor};margin-right:7px"></span>${nm}</td>
+      <td style="padding:8px 10px;font-size:10px;color:var(--muted)">${l.periodo||'—'}</td>
+      <td class="num">${fR(l.spend)}</td><td class="num">${fN(l.leads||null)}</td><td class="num ${l.cpl?cplCls(l.cpl):''}">${fR(l.cpl)}</td>
+      <td class="num">${fN(l.vendas)}</td><td class="num" style="color:var(--hotmart);font-weight:700">${fR(l.receita)}</td>
+      <td class="num">${fR(l.vendas?r2(l.receita/l.vendas):null)}</td><td class="num ${roasC(l.roas)}" style="font-weight:700">${l.roas!=null?l.roas.toFixed(2)+'x':'—'}</td></tr>`;
+  });
+  if(RESUMO.outros_spend) h+=`<tr><td style="padding:8px 10px;font-size:11px;color:var(--muted)"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#cbd5e1;margin-right:7px"></span>Outras campanhas</td><td style="padding:8px 10px;font-size:10px;color:var(--muted2)">sem código no nome</td><td class="num">${fR(RESUMO.outros_spend)}</td><td colspan="6"></td></tr>`;
+  h+=`</tbody><tfoot><tr style="background:var(--surface2);font-weight:700;border-top:2px solid var(--border)"><td style="padding:8px 10px;font-size:10px;text-transform:uppercase;color:var(--muted2)">Total</td><td></td>
+    <td class="num">${fR(spAll)}</td><td class="num">${fN(T.ld)}</td><td></td><td class="num">${fN(T.v)}</td><td class="num" style="color:var(--hotmart)">${fR(T.rec)}</td><td></td><td class="num ${roasC(roasAll)}">${roasAll!=null?roasAll.toFixed(2)+'x':'—'}</td></tr></tfoot></table>`;
+  document.getElementById('grTabela').innerHTML=h;
+  dc('chGrIni');
+  CH['chGrIni']=new Chart(document.getElementById('chGrIni'),{type:'bar',data:{labels:L.map(l=>l.cod),datasets:[
+    {label:'Investimento',data:L.map(l=>l.spend),backgroundColor:'rgba(59,130,246,.65)',borderRadius:4,datalabels:{display:false}},
+    {label:'Receita',data:L.map(l=>l.receita||0),backgroundColor:'rgba(255,107,0,.7)',borderRadius:4,datalabels:{display:false}}]},
+    options:{...bo(),scales:{x:{ticks:{color:TXT(),font:bf},grid:{display:false}},y:{beginAtZero:true,ticks:{color:TXT(),font:bf,callback:v=>fR0(v)},grid:{color:GRID()}}}}});
+  const MES=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  dc('chGrMes');
+  CH['chGrMes']=new Chart(document.getElementById('chGrMes'),{type:'bar',data:{labels:RESUMO.meses.map(m=>MES[+m.slice(5)-1]+'/'+m.slice(2,4)),
+    datasets:Object.entries(RESUMO.mensal).filter(([k,v])=>v.some(x=>x>0)).map(([k,v])=>({label:k,data:v,backgroundColor:RESUMO.cores[k]||'#cbd5e1',borderRadius:2,datalabels:{display:false}}))},
+    options:{...bo(),scales:{x:{stacked:true,ticks:{color:TXT(),font:bf},grid:{display:false}},y:{stacked:true,ticks:{color:TXT(),font:bf,callback:v=>fR0(v)},grid:{color:GRID()}}}}});
+}
+(function(){
+  const _rm=renderMeta;
+  renderMeta=function(){ _rm(); setTimeout(renderResumoGeral,40); };
+  setTimeout(renderResumoGeral,60);
+})();
+</script>

@@ -11,7 +11,7 @@ from pathlib import Path
 
 SHEET_ID         = "1s0UHuiOL17BdkrYEMC7bmcdQW5snl0agA6v8qoIVHAs"
 TEMPLATE_FILE    = "dashboard_lancamento_gratuito.html"
-OUTPUT_FILE      = "index.html"
+OUTPUT_FILE      = "RDC04.html"   # index.html é o menu (gerador_perpetuo.py)
 
 NOME_CLIENTE     = "Dra Monica"
 LOGO_LETRA       = "DM"
@@ -63,6 +63,11 @@ UPSELL_PRODUTOS   = ["poplist"]
 
 # DOWNSELL — campanha separada (começou em 05/10 no RDC04). Guia saiu de upsell → downsell.
 DOWNSELL_PRODUTOS = ["Guia de Adequação à RDC 1002/2025"]
+
+# PERPÉTUO — a partir desta data o produto abaixo é vendido no perpétuo (dashboard próprio,
+# gerador_perpetuo.py) e sai das vendas do lançamento. Antes disso era order bump do RDC04.
+PERPETUO_PRODUTO = "POPList - Passo a passo para colocar os POPs da sua clínica odontológica em ordem"
+PERPETUO_INICIO  = "2026-10-15"
 USAR_DOWNSELL     = True         # campanha de downsell ativa
 USAR_TOTAIS       = True         # principais + downsell
 # (O comparativo sempre lê todas as vendas e as SEPARA em principal / upsell / downsell no card.)
@@ -103,8 +108,11 @@ def safe(v):
 def download_thumb(url, d):
     if not url or str(url)=="nan": return ""
     try:
-        ext=".png" if ".png" in url.lower() else ".jpg"
-        fname=hashlib.md5(url.encode()).hexdigest()[:16]+ext
+        # hash do PATH: a query assinada da Meta muda todo dia e duplicava a mesma imagem
+        from urllib.parse import urlparse
+        path=urlparse(url).path
+        ext=".png" if path.lower().endswith(".png") else ".jpg"
+        fname=hashlib.md5(path.encode()).hexdigest()[:16]+ext
         fp=d/fname
         if not fp.exists():
             r=requests.get(url,timeout=10,headers={"User-Agent":"Mozilla/5.0"})
@@ -558,6 +566,14 @@ def _ler_hotmart():
     print("     nenhuma aba de vendas encontrada → " + " | ".join(erros))
     return None, None
 
+def _tira_perpetuo(df, aba):
+    """Remove da aba ao vivo as vendas do produto perpétuo feitas a partir do início do perpétuo."""
+    if not PERPETUO_PRODUTO or aba not in PRECO_FIXO_ABAS or "produto" not in df.columns:
+        return df
+    m = (_txt(df["produto"]).str.strip() == PERPETUO_PRODUTO) & (df["date"].dt.normalize() >= pd.Timestamp(PERPETUO_INICIO))
+    if m.any(): print(f"     {int(m.sum())} venda(s) do perpétuo ({PERPETUO_PRODUTO[:20]}…) fora do lançamento")
+    return df[~m]
+
 def hotmart_data(excluir_produtos=None, apenas_produtos=None, rotulo="hotmart"):
     """excluir_produtos: descarta esses produtos (ex.: tira o downsell das Vendas principais).
     apenas_produtos:  mantém só esses produtos (ex.: página Downsell)."""
@@ -601,6 +617,7 @@ def hotmart_data(excluir_produtos=None, apenas_produtos=None, rotulo="hotmart"):
         df = _aplicar_valor_liquido(df)   # valor exato sem impostos (quando a aba de fechamento existe)
         df = _aplicar_preco_fixo(df, aba) # preço fixo só como fallback nas linhas sem valor exato
         df = df.dropna(subset=["date"])
+        df = _tira_perpetuo(df, aba)
 
         # status: aceita variações PT/EN; se a coluna vier vazia, não filtra
         st = _txt(df["status"]).str.strip().str.upper()
@@ -887,6 +904,7 @@ def lancamentos_data(excluir_produtos=None):
         df["price"] = to_num(df["price"])
         df = _aplicar_preco_fixo(df, aba)
         df = df.dropna(subset=["date"])
+        df = _tira_perpetuo(df, aba)
 
         st = _txt(df["status"]).str.strip().str.upper()
         aprovados = ["APPROVED", "COMPLETE", "COMPLETED", "APROVADO", "APROVADA", "COMPLETO", "PAGO", "PAID"]

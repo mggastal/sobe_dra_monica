@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dra Monica — Dashboards</title>
+<link rel="icon" type="image/png" href="sobe.png">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f0f2f7;--surface:#fff;--surface2:#f7f8fc;--border:rgba(0,0,0,.07);--text:#0f1523;--muted:#6b7280;--muted2:#9ca3af;--sh:0 1px 4px rgba(0,0,0,.06);--hotmart:#ff6b00;}
+[data-theme="dark"]{--bg:#0a0f1e;--surface:#111827;--surface2:#1a2236;--border:rgba(255,255,255,.08);--text:#f0f4ff;--muted:#8b95a9;--muted2:#5a6478;--sh:0 1px 4px rgba(0,0,0,.3);--hotmart:#ff8c38;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;min-height:100vh;display:flex;flex-direction:column;}
+a{color:inherit;text-decoration:none;}
+.hero{background:#0f1523;color:#fff;}
+[data-theme="dark"] .hero{background:#060b14;}
+.wrap{max-width:1160px;margin:0 auto;padding:0 20px;width:100%;}
+.hero .wrap{padding-top:26px;padding-bottom:64px;}
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.brand{display:flex;align-items:center;gap:12px;}
+.logo-box{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:'DM Sans',sans-serif;font-size:17px;font-weight:700;color:#fff;background:linear-gradient(135deg,#0ea5e9,#0ea5e9cc);}
+.b-name{font-family:'DM Sans',sans-serif;font-size:16px;font-weight:700;}
+.b-sub{font-size:10px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:1.5px;}
+.theme-btn{padding:6px 11px;border-radius:8px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);cursor:pointer;font-size:11px;font-weight:600;color:rgba(255,255,255,.7);font-family:inherit;}
+.h1{font-family:'DM Sans',sans-serif;font-size:28px;font-weight:700;margin-top:34px;line-height:1.15;}
+.h1-sub{color:rgba(255,255,255,.45);font-size:13px;margin-top:6px;}
+.main{margin-top:-42px;flex:1;}
+.sec-lbl{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin:22px 0 8px;}
+.card{display:block;background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--sh);position:relative;overflow:hidden;transition:transform .15s,box-shadow .15s,border-color .15s;}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--kc,#cbd5e1);}
+a.card:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(15,21,35,.12);border-color:var(--kc);}
+.perp{display:grid;grid-template-columns:minmax(220px,1fr) 2fr;gap:18px;padding:20px 22px;align-items:center;}
+.c-tag{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--kc);}
+.pulse{width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.c-ttl{font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;margin:4px 0 4px;}
+.c-sub{font-size:12px;color:var(--muted);line-height:1.45;}
+.c-go{display:inline-block;margin-top:10px;font-size:12px;font-weight:700;color:var(--kc);}
+.kgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.k{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 13px;}
+.k-l{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1.1px;font-weight:600;margin-bottom:5px;}
+.k-v{font-family:'DM Sans',sans-serif;font-size:18px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;}
+.k-s{font-size:10px;color:var(--muted);margin-top:4px;}
+.lgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.lct{padding:16px 16px 14px;}
+.lct-h{display:flex;align-items:baseline;justify-content:space-between;gap:6px;}
+.lct-cod{font-family:'DM Sans',sans-serif;font-size:18px;font-weight:700;}
+.lct-per{font-size:10px;color:var(--muted2);}
+.lct-mes{font-size:11px;color:var(--muted);margin-bottom:12px;}
+.lct-m{display:grid;grid-template-columns:1fr 1fr;gap:9px 10px;}
+.lct-m div{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;font-weight:600;}
+.lct-m b{display:block;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);letter-spacing:0;text-transform:none;margin-top:2px;font-variant-numeric:tabular-nums;}
+.lct-f{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:10px;border-top:1px solid var(--border);font-size:11px;font-weight:700;color:var(--kc);}
+.roas{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;}
+.r-ok{background:rgba(5,150,105,.12);color:#059669;}.r-mid{background:rgba(217,119,6,.12);color:#d97706;}.r-bad{background:rgba(220,38,38,.12);color:#dc2626;}
+.off{opacity:.55;pointer-events:none;}
+.geral{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 22px;flex-wrap:wrap;}
+.geral .kgrid{grid-template-columns:repeat(3,minmax(120px,1fr));flex:1;max-width:560px;}
+.foot{padding:26px 16px 30px;display:flex;justify-content:center;align-items:center;gap:8px;font-size:11px;color:var(--muted2);border-top:1px solid var(--border);margin-top:30px;}
+.foot img{height:36px;width:auto;opacity:.85;}
+[data-theme="dark"] .foot img{filter:brightness(0) invert(1);opacity:.9;}
+@media(max-width:980px){.lgrid{grid-template-columns:1fr 1fr;}.perp{grid-template-columns:1fr;}}
+@media(max-width:600px){.lgrid{grid-template-columns:1fr;}.kgrid{grid-template-columns:1fr 1fr;}.geral .kgrid{grid-template-columns:1fr 1fr;}.h1{font-size:23px;}.wrap{padding:0 16px;}}
+</style>
+</head>
+<body>
+<div class="hero"><div class="wrap">
+  <div class="top">
+    <div class="brand"><div class="logo-box">DM</div><div><div class="b-name">Dra Monica</div><div class="b-sub">Dashboards de tráfego</div></div></div>
+    <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">🌙 Escuro</button>
+  </div>
+  <div class="h1">Qual visão você quer abrir?</div>
+  <div class="h1-sub" id="upd"></div>
+</div></div>
+
+<div class="main"><div class="wrap">
+  <div id="perp"></div>
+  <div class="sec-lbl">Lançamentos</div>
+  <div class="lgrid" id="lancs"></div>
+  <div class="sec-lbl">Consolidado</div>
+  <div id="geral"></div>
+</div></div>
+<div class="foot">Desenvolvido por <img src="sobe.png" alt="Sobé Estratégias" onerror="this.replaceWith(document.createTextNode('Sobé Estratégias'))"></div>
+
+<script>
+const DATA = null;
+const fR=v=>v==null||isNaN(v)?'—':'R$ '+Math.round(v).toLocaleString('pt-BR');
+const fN=v=>v==null||isNaN(v)?'—':Math.round(v).toLocaleString('pt-BR');
+const fC=v=>v==null||isNaN(v)?'—':'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const roas=v=>v==null||!isFinite(v)?'<span class="roas" style="color:var(--muted2)">—</span>':`<span class="roas ${v>=2?'r-ok':v>=1?'r-mid':'r-bad'}">${v.toFixed(2).replace('.',',')}x</span>`;
+function setThemeBtn(){const d=document.documentElement.getAttribute('data-theme')==='dark';document.getElementById('themeBtn').textContent=d?'☀️ Claro':'🌙 Escuro';}
+function toggleTheme(){const d=document.documentElement.getAttribute('data-theme')==='dark';document.documentElement.setAttribute('data-theme',d?'light':'dark');try{localStorage.setItem('lct-theme',d?'light':'dark');}catch(e){}setThemeBtn();}
+(function(){let s=null;try{s=localStorage.getItem('lct-theme');}catch(e){}if(s)document.documentElement.setAttribute('data-theme',s);setThemeBtn();})();
+
+const P=DATA.perp, L=DATA.lancs;
+const k=(l,v,s,c)=>`<div class="k"><div class="k-l">${l}</div><div class="k-v" style="${c?'color:'+c:''}">${v}</div>${s?`<div class="k-s">${s}</div>`:''}</div>`;
+document.getElementById('upd').textContent='Atualizado em '+DATA.atualizado+' · Meta Ads + Hotmart';
+
+document.getElementById('perp').innerHTML=P?`<a class="card perp" href="${DATA.perp_arquivo}" style="--kc:${DATA.cor_perp}">
+  <div><span class="c-tag"><span class="pulse"></span>Sempre ativo</span><div class="c-ttl">Perpétuo · POPList</div>
+  <div class="c-sub">Campanhas PERPETUO × vendas do POPList na Hotmart. Funil, métricas diárias, campanhas, criativos e ROAS. Desde ${P.inicio}.</div>
+  <span class="c-go">Abrir perpétuo →</span></div>
+  <div class="kgrid">${k('Investido',fC(P.spend))}${k('Vendas',fN(P.vendas),`${fN(P.vendas_attr)} pelo anúncio`)}${k('Receita',fC(P.receita),'',`var(--hotmart)`)}${k('ROAS',P.roas!=null?P.roas.toFixed(2).replace('.',',')+'x':'—','receita ÷ invest.')}</div></a>`
+ :`<div class="card perp off"><div class="c-ttl">Perpétuo</div><div class="c-sub">Nenhuma campanha PERPETUO ainda.</div></div>`;
+
+document.getElementById('lancs').innerHTML=L.map(l=>{
+  const [cod,mes]=l.label.split(' · ');
+  const body=`<div class="lct-h"><span class="lct-cod">${cod}</span><span class="lct-per">${l.periodo||''}</span></div><div class="lct-mes">${mes||''}</div>
+    <div class="lct-m"><div>Investido<b>${fR(l.spend)}</b></div><div>Leads<b>${fN(l.leads)}</b></div>
+    <div>CPL<b>${fC(l.cpl)}</b></div><div>Vendas<b>${fN(l.vendas)}</b></div>
+    <div>Receita<b style="color:var(--hotmart)">${fR(l.receita)}</b></div><div>ROAS<b>${roas(l.roas)}</b></div></div>
+    <div class="lct-f"><span>${l.arquivo?'Abrir →':'Em breve'}</span></div>`;
+  return l.arquivo?`<a class="card lct" href="${l.arquivo}" style="--kc:${l.cor}">${body}</a>`:`<div class="card lct off" style="--kc:${l.cor}">${body}</div>`;
+}).join('');
+
+const tl=L.reduce((a,l)=>({rec:a.rec+(l.receita||0),ld:a.ld+(l.leads||0)}),{rec:0,ld:0});
+const recTot=tl.rec+(P?P.receita:0);
+document.getElementById('geral').innerHTML=`<a class="card geral" href="${DATA.geral_arquivo}" style="--kc:#334155">
+  <div><div class="c-ttl" style="font-size:19px">Geral</div><div class="c-sub">Todas as campanhas no Meta (lançamentos + perpétuo) e o comparativo entre lançamentos.</div><span class="c-go" style="color:var(--text)">Abrir geral →</span></div>
+  <div class="kgrid">${k('Investido total',fR(DATA.total_spend))}${k('Receita total',fR(recTot),'',`var(--hotmart)`)}${k('ROAS',DATA.total_spend?(recTot/DATA.total_spend).toFixed(2).replace('.',',')+'x':'—')}</div></a>`;
+</script>
+</body>
+</html>
