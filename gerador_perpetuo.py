@@ -388,6 +388,16 @@ def render(tpl, out, consts, simples=None):
     for k, v in (simples or {}).items(): html = re.sub(rf"const {k}\s*=\s*[^;]+;", f"const {k}={v};", html, count=1)
     Path(out).write_text(html, encoding="utf-8"); print(f"  ✓ {out} ({len(html)//1024}KB)")
 
+def limpar_imgs():
+    """Apaga de imgs/ as miniaturas que nenhuma página publicada usa (o Pages tem limite de 1 GB)."""
+    ref = set()
+    for f in Path(".").glob("*.html"):
+        if not f.name.startswith("dashboard_"):
+            ref |= set(re.findall(r"imgs/[0-9a-f]{16}\.(?:jpg|png)", f.read_text(encoding="utf-8", errors="ignore")))
+    orf = [f for f in Path("imgs").glob("*") if f.is_file() and f"imgs/{f.name}" not in ref]
+    for f in orf: f.unlink()
+    print(f"  ✓ imgs/: {len(orf)} miniatura(s) sem uso removida(s)")
+
 def main():
     so_rdc01 = "--rdc01" in sys.argv
     print("=" * 60); print("Dra Monica — Perpétuo / Geral / Menu" + (" / RDC01" if so_rdc01 else "")); print("=" * 60)
@@ -419,6 +429,7 @@ def main():
             "outros_spend": None, "total_spend": r2(df_meta["sp"].sum()),
             "perp_arquivo": OUT_PERPETUO, "geral_arquivo": OUT_GERAL, "cor_perp": COR_PERPETUO,
             "atualizado": date.today().strftime("%d/%m/%Y")}})
+    print("\n[IMGS]"); limpar_imgs()
     print("=" * 60)
 
 if __name__ == "__main__":
