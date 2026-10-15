@@ -84,9 +84,10 @@ def ler_meta():
     ren = {"Date": "date", "Campaign Name": "camp", "Adset Name": "adset", "Ad Name": "ad",
            "Thumbnail URL": "thumb", "Status": "status", "Spend (Cost, Amount Spent)": "sp",
            "Impressions": "imp", "Action Link Clicks": "lc", "Action Landing Page View": "pv",
-           "Action Omni Initiated Checkout": "ic", "Action Omni Purchase": "pc", "Action Leads": "lead"}
+           "Action Omni Initiated Checkout": "ic", "Action Omni Purchase": "pc",
+           "Action Value Omni Purchase": "pcv", "Action Leads": "lead"}
     df = df.rename(columns=ren)
-    for c in ["sp", "imp", "lc", "pv", "ic", "pc", "lead"]:
+    for c in ["sp", "imp", "lc", "pv", "ic", "pc", "pcv", "lead"]:
         df[c] = G.to_num(df[c]) if c in df.columns else 0
     df["date"] = pd.to_datetime(df["date"], errors="coerce")
     df = df.dropna(subset=["date"])
@@ -174,17 +175,11 @@ def perpetuo(df_meta, img_dir):
     inicio = pd.Timestamp(PERPETUO_INICIO) if PERPETUO_INICIO else p.loc[p["sp"] > 0, "date"].min().normalize()
     orig, vend = vendas_perpetuo(inicio)
 
-    # vendas atribuídas → linhas (dia, campanha, público, criativo)
-    va = vend[vend["perp"]].assign(date=lambda x: x["date"].dt.normalize())
-    va = va.groupby(["date", "v_camp", "v_adset", "v_ad"]).agg(ld=("price", "size"), rec=("price", "sum")).reset_index() \
-           .rename(columns={"v_camp": "camp", "v_adset": "adset", "v_ad": "ad"})
-    agg = p.groupby(["date", "camp", "adset", "ad"])[["sp", "imp", "lc", "pv", "ic", "pc"]].sum().reset_index()
-    agg = agg.merge(va, on=["date", "camp", "adset", "ad"], how="outer").fillna({k: 0 for k in NUM})
-    sem_match = va.merge(p[["camp", "adset", "ad"]].drop_duplicates(), on=["camp", "adset", "ad"], how="left", indicator=True)
-    sem_match = sem_match[sem_match["_merge"] == "left_only"]
-    if len(sem_match):
-        print(f"  ⚠ {int(sem_match['ld'].sum())} venda(s) com SCK de anúncio que não existe no Meta: "
-              f"{sem_match[['camp','adset','ad']].drop_duplicates().values.tolist()[:3]}")
+    # Vendas nas páginas de Meta = compras ATRIBUÍDAS PELO META (pixel, dentro da janela de
+    # atribuição): conta quem viu/clicou no anúncio e comprou por qualquer caminho (ManyChat,
+    # direto, WhatsApp…). A Hotmart (todas as vendas reais) fica nas páginas de Vendas.
+    agg = p.groupby(["date", "camp", "adset", "ad"])[["sp", "imp", "lc", "pv", "ic", "pc", "pcv"]].sum().reset_index()
+    agg["ld"], agg["rec"] = agg["pc"], agg["pcv"]
     dias = pd.date_range(inicio, max(pd.Timestamp(date.today()), agg["date"].max()), freq="D")
 
     st_c, st_a, st_ad = status_maps(p)
@@ -259,7 +254,12 @@ def breakdowns_pixel(inicio):
     for url, key, cols in [(G.URL_GA, "_raw_ga", ["Age (Breakdown)", "Gender (Breakdown)"]),
                            (G.URL_PT, "_raw_pt", ["Platform Position (Breakdown)"])]:
         try:
-            b = pd.read_csv(url)
+            b = None
+            for tent in range(3):   # a planilha às vezes volta vazia enquanto o Stract escreve
+                try: b = pd.read_csv(url); break
+                except pd.errors.EmptyDataError:
+                    import time; time.sleep(5)
+            if b is None: raise RuntimeError("aba vazia após 3 tentativas")
             b = b[G._txt(b["Campaign Name"]).str.upper().str.contains(PERPETUO_TAG, na=False)].copy()
             b["date"] = pd.to_datetime(b["Date"], errors="coerce"); b = b.dropna(subset=["date"])
             b["sp"] = G.to_num(b["Spend (Cost, Amount Spent)"])

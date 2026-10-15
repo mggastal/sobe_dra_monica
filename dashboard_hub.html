@@ -100,7 +100,7 @@ document.getElementById('perp').innerHTML=P?`<a class="card perp" href="${DATA.p
   <div><span class="c-tag"><span class="pulse"></span>Sempre ativo</span><div class="c-ttl">Perpétuo · POPList</div>
   <div class="c-sub">Campanhas PERPETUO × vendas do POPList na Hotmart. Funil, métricas diárias, campanhas, criativos e ROAS. Desde ${P.inicio}.</div>
   <span class="c-go">Abrir perpétuo →</span></div>
-  <div class="kgrid">${k('Investido',fC(P.spend))}${k('Vendas',fN(P.vendas),`${fN(P.vendas_attr)} pelo anúncio`)}${k('Receita',fC(P.receita),'',`var(--hotmart)`)}${k('ROAS',P.roas!=null?P.roas.toFixed(2).replace('.',',')+'x':'—','receita ÷ invest.')}</div></a>`
+  <div class="kgrid">${k('Investido',fC(P.spend))}${k('Vendas',fN(P.vendas),`Hotmart · ${fN(P.vendas_attr)} atribuídas pelo Meta`)}${k('Receita',fC(P.receita),'',`var(--hotmart)`)}${k('ROAS',P.roas!=null?P.roas.toFixed(2).replace('.',',')+'x':'—','receita ÷ invest.')}</div></a>`
  :`<div class="card perp off"><div class="c-ttl">Perpétuo</div><div class="c-sub">Nenhuma campanha PERPETUO ainda.</div></div>`;
 
 document.getElementById('lancs').innerHTML=L.map(l=>{

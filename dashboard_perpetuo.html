@@ -371,7 +371,7 @@ details.desk-only{display:block!important;}
       <!-- Gráfico Leads · Investimento · CPL -->
       <div class="cc mb14">
         <div class="cc-t">Vendas Diárias & Investimento</div>
-        <div class="cc-s">Vendas Hotmart atribuídas pelo SCK (barras) · Invest. (linha verde) · Receita (linha laranja) · ROAS (tracejada)</div>
+        <div class="cc-s">Vendas atribuídas pelo Meta (barras) · Invest. (linha verde) · Receita (linha laranja) · ROAS (tracejada)</div>
         <div class="cw" style="height:210px"><canvas id="chMetaMain"></canvas></div>
       </div>
       <!-- Campanhas -->
@@ -399,7 +399,7 @@ details.desk-only{display:block!important;}
     <div class="page-section" id="page-melhores">
       <div class="cc mb14" style="padding:14px 16px">
         <div class="cc-t">Melhores criativos · atemporal</div>
-        <div class="cc-s" style="margin-top:3px">Todo o histórico do perpétuo, desde o 1º dia, <b>ignorando o filtro de período</b>. Anúncios com o mesmo nome viram uma linha só (soma todos os públicos e campanhas). Vendas e receita = Hotmart, atribuídas pelo SCK. Clique no cabeçalho para ordenar.</div>
+        <div class="cc-s" style="margin-top:3px">Todo o histórico do perpétuo, desde o 1º dia, <b>ignorando o filtro de período</b>. Anúncios com o mesmo nome viram uma linha só (soma todos os públicos e campanhas). Vendas e receita = compras atribuídas pelo Meta (janela de atribuição do pixel). Clique no cabeçalho para ordenar.</div>
         <div style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:11px;color:var(--muted)">Investimento mínimo R$ <input type="number" id="mlMin" value="0" min="0" step="10" oninput="renderMelhores()" style="width:80px;padding:4px 7px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:inherit"></div>
       </div>
       <div class="tc" id="tMelhores"></div>
@@ -957,7 +957,7 @@ function buildFunnel(mk){
     {lbl:'Link Clicks', val:mk.link_clicks,  color:hexA(FUNIL_COLOR,0.75)},
     {lbl:'Page Views',  val:mk.page_view,    color:hexA(FUNIL_COLOR,0.50)},
     {lbl:'Checkouts',   val:mk.ic,           color:'#34d399'},
-    {lbl:'Vendas (Hotmart)', val:mk.leads,   color:FUNIL_GREEN},
+    {lbl:'Vendas (Meta)', val:mk.leads,   color:FUNIL_GREEN},
   ];
   const rates=[
     {lbl:'CTR',           val:mk.ctr,           bom:CTR_BOM,      medio:CTR_MEDIO},
@@ -1011,9 +1011,9 @@ function renderMeta(){
   const cplCor=cplMK!=null?(cplMK<=CPL_BOM?'#059669':cplMK<=CPL_MEDIO?'#d97706':'#dc2626'):'var(--muted)';
   document.getElementById('metaKpis').innerHTML=`
     <div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Investimento</div><div class="kpi-val" style="font-size:16px;color:var(--text)">${fR(spMK)}</div><div class="kpi-sub">Meta Ads</div></div>
-    <div class="kpi" style="--kc:#3b82f6"><div class="kpi-lbl">Vendas</div><div class="kpi-val" style="color:var(--text)">${fN(ldMK)}</div><div class="kpi-sub">Hotmart · SCK do anúncio</div></div>
+    <div class="kpi" style="--kc:#3b82f6"><div class="kpi-lbl">Vendas</div><div class="kpi-val" style="color:var(--text)">${fN(ldMK)}</div><div class="kpi-sub">atribuídas pelo Meta (janela de atribuição)</div></div>
     <div class="kpi" style="--kc:${cplCor}"><div class="kpi-lbl">CPA</div><div class="kpi-val" style="color:${cplCor}">${fR(cplMK)}</div><div class="kpi-sub">Custo por venda</div></div>
-    <div class="kpi" style="--kc:var(--hotmart)"><div class="kpi-lbl">Receita</div><div class="kpi-val" style="font-size:16px;color:var(--hotmart)">${fR(recMK)}</div><div class="kpi-sub">vendas atribuídas ao perpétuo</div></div>
+    <div class="kpi" style="--kc:var(--hotmart)"><div class="kpi-lbl">Receita</div><div class="kpi-val" style="font-size:16px;color:var(--hotmart)">${fR(recMK)}</div><div class="kpi-sub">valor das compras atribuídas</div></div>
     <div class="kpi" style="--kc:${roasCor}"><div class="kpi-lbl">ROAS</div><div class="kpi-val" style="color:${roasCor}">${roasMK!=null?roasMK.toFixed(2)+'x':'—'}</div><div class="kpi-sub">receita ÷ investimento</div></div>`;
 
   // Funil recalculado do período + campanha
@@ -1246,7 +1246,6 @@ function buildTable(elId,data,mainCol){
     {k:'ld',l:'Vendas',f:fN},
     {k:'rec',l:'Receita',f:fR},
     {k:'roas',l:'ROAS',f:fX,cls2:roasCls},
-    {k:'pc',l:'Pixel',f:fN,cls:'cn'},
     {k:'ctr',l:'CTR',f:fP,cls2:v=>funnelCls(v,CTR_BOM,CTR_MEDIO).cls},
     {k:'cr',l:'C.Rate',f:fP,cls2:v=>funnelCls(v,CR_BOM,CR_MEDIO).cls},
     {k:'tx_cv',l:'Conv. PV',f:fP,cls2:v=>funnelCls(v,TX_CONV_BOM,TX_CONV_MEDIO).cls},
@@ -1445,7 +1444,7 @@ function renderSeg(){
     const el=document.getElementById(elId);
     if(!data?.length){el.innerHTML='<div style="padding:8px;font-size:11px;color:var(--muted)">Sem dados</div>';return;}
     el.innerHTML=`<table>
-      <thead><tr><th>${lbl}</th><th class="num">Invest.</th><th class="num">Compras (pixel)</th><th class="num">CPA (pixel)</th></tr></thead>
+      <thead><tr><th>${lbl}</th><th class="num">Invest.</th><th class="num">Vendas</th><th class="num">CPA</th></tr></thead>
       <tbody>${data.map(r=>`<tr>
         <td style="font-size:11px">${r.n}</td>
         <td class="num">${fR(r.spend)}</td><td class="num">${fN(r.ld)}</td>
