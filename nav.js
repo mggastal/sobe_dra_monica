@@ -31,6 +31,14 @@ const DM_NAV = {"menu": "index.html", "itens": [{"grupo": "", "label": "Perpétu
   const st=document.createElement('style');st.textContent=css;document.head.appendChild(st);
   if(!document.querySelector('link[rel="icon"]')){const l=document.createElement('link');l.rel='icon';l.type='image/png';l.href='sobe.png';document.head.appendChild(l);}
 
+  // logo do produto no topo do menu lateral: RDCs = Checklist RDC, Perpétuo = POPList
+  const prod=/^RDC/i.test(here)?{src:'logos/checklist.webp',alt:'Checklist RDC'}:here==='perpetuo.html'?{src:'logos/poplist_branco.svg',alt:'POPList'}:null;
+  const lb=document.getElementById('logoBox'),nm=document.getElementById('sbNome');
+  if(prod&&lb&&nm){lb.style.display='none';nm.style.display='none';
+    const im=document.createElement('img');im.src=prod.src;im.alt=prod.alt;
+    im.style.cssText='display:block;height:24px;width:auto;max-width:100%;object-fit:contain;object-position:left;margin-bottom:5px';
+    nm.parentNode.insertBefore(im,nm);}
+
   const sobeImg='<img src="sobe.png" alt="Sobé Estratégias" onerror="this.replaceWith(document.createTextNode(\'Sobé Estratégias\'))">';
   const nav=document.querySelector('#sidebar .sb-nav, .sb .sb-nav');
   if(nav){
