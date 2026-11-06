@@ -2140,8 +2140,8 @@ function renderVendas(){
   document.getElementById('vendasKpis').innerHTML=
     '<div class="kpi" style="--kc:'+HL+'"><div class="kpi-lbl">Receita Bruta</div><div class="kpi-val" style="font-size:18px;color:'+HL+'">'+fRec(totReceita)+'</div><div class="kpi-sub">todos os canais</div></div>'+
     '<div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Vendas</div><div class="kpi-val">'+totVendas+'</div><div class="kpi-sub">compradores do POPList</div></div>'+
-    (()=>{const inv=HM.total_inv||0,ro=inv>0?r2(totReceita/inv):null,c=roasCls(ro)==='cg'?'#059669':roasCls(ro)==='cw2'?'#d97706':ro!=null?'#dc2626':'var(--muted)';
-      return '<div class="kpi" style="--kc:'+c+'"><div class="kpi-lbl">ROAS geral</div><div class="kpi-val" style="color:'+c+'">'+fX(ro)+'</div><div class="kpi-sub">receita total ÷ invest. '+fR(inv)+'</div></div>';})()+
+    (()=>{const mdP=applyPeriodVendas(META_DAILY?.lct),inv=(mdP?.spend||[]).reduce((x,y)=>x+(y||0),0),ro=inv>0?r2(totReceita/inv):null,c=roasCls(ro)==='cg'?'#059669':roasCls(ro)==='cw2'?'#d97706':ro!=null?'#dc2626':'var(--muted)';
+      return '<div class="kpi" style="--kc:'+c+'"><div class="kpi-lbl">ROAS geral</div><div class="kpi-val" style="color:'+c+'">'+fX(ro)+'</div><div class="kpi-sub">receita ÷ invest. do período '+fR(inv)+'</div></div>';})()+
     '<div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Ticket Médio</div><div class="kpi-val">'+fRec(ticket)+'</div><div class="kpi-sub">receita ÷ compradores</div></div>';
 
   // Gráfico empilhado: base = compradores (principal), cada upsell em outra cor
